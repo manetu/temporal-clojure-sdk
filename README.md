@@ -28,6 +28,10 @@ To solve the problem add the following entries to your `/etc/hosts` file (where 
 ::1         my-macbook
 ```
 
+## Using
+
+You can peruse the [API Doc](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
+
 ## Contributing
 
 Pull requests welcome.  Please be sure to include a [DCO](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin) in any commit messages.
