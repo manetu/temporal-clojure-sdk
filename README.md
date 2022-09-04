@@ -1,4 +1,4 @@
-# Temporal Clojure SDK 
+# Temporal Clojure SDK [![CircleCI](https://dl.circleci.com/status-badge/img/gh/manetu/temporal-clojure-sdk/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/manetu/temporal-clojure-sdk/tree/master)
 
 [Temporal](https://github.com/temporalio/temporal) is a Workflow-as-Code platform for building and operating
 resilient applications using developer-friendly primitives, instead of constantly fighting your infrastructure.
