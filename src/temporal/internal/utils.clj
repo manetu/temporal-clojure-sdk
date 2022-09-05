@@ -2,8 +2,8 @@
 
 (ns ^:no-doc temporal.internal.utils
   (:require [clojure.string :as string]
-            [clojure.edn :as edn]
             [taoensso.timbre :as log]
+            [taoensso.nippy :as nippy]
             [promesa.core :as p])
   (:import [io.temporal.common.converter EncodedValues]
            [io.temporal.workflow Promise
@@ -14,6 +14,8 @@
             Functions$Func4
             Functions$Func5
             Functions$Func6]))
+
+(def ^Class bytes-type (Class/forName "[B"))
 
 (defn build [builder spec params]
   (doseq [[key value] params]
@@ -52,22 +54,22 @@
       (str "." sym)))
 
 (defn ->objarray
-  "Converts a collection of serializable elements to an array of Objects, suitable for many Temporal APIs"
-  [coll]
-  (into-array Object [(prn-str coll)]))
+  "Serializes x to an array of Objects, suitable for many Temporal APIs"
+  [x]
+  (into-array Object [(nippy/freeze x)]))
 
 (defn ->args
   "Decodes EncodedValues to native clojure data type.  Assumes all data is in the first element"
   [^EncodedValues args]
-  (edn/read-string (.get args (int 0) ^Class String)))
+  (nippy/thaw (.get args (int 0) bytes-type)))
 
 (defn wrap-encoded
-  "Wraps 'f' in a codec, EncodedValues args in, and edn out"
+  "Wraps 'f' in a codec, EncodedValues args in, and nippy-encoded bytes out"
   [f args]
   (-> args
       (->args)
       (f)
-      (prn-str)))
+      (nippy/freeze)))
 
 (def namify
   "Converts strings or keywords to strings, preserving fully qualified keywords when applicable"

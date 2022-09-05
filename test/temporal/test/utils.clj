@@ -3,7 +3,8 @@
 (ns temporal.test.utils
   "Utilities common to all tests"
   (:require [taoensso.timbre :as log]
-            [temporal.testing.env :as e]))
+            [temporal.testing.env :as e]
+            [temporal.client.core :as c]))
 
 (log/set-level! :trace)
 
@@ -19,6 +20,9 @@
 ;;-----------------------------------------------------------------------------
 (defn get-client []
   (get @state :client))
+
+(defn create-workflow [workflow]
+  (c/create-workflow (get-client) workflow {:task-queue task-queue}))
 
 ;;-----------------------------------------------------------------------------
 ;; Fixtures

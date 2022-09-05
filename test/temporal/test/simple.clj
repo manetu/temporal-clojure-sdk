@@ -3,12 +3,12 @@
 (ns temporal.test.simple
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
-            [temporal.client.core :as w]
+            [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]
-            [temporal.test.utils :as test-utils]))
+            [temporal.test.utils :as t]))
 
-(use-fixtures :once test-utils/wrap-service)
+(use-fixtures :once t/wrap-service)
 
 (defactivity greet-activity
   [ctx {:keys [name] :as args}]
@@ -20,8 +20,8 @@
   (log/info "greeter-workflow:" args)
   @(a/invoke greet-activity args))
 
-(deftest basic-test
+(deftest the-test
   (testing "Verifies that we can round-trip through start"
-    (let [workflow (w/create-workflow (test-utils/get-client) greeter-workflow {:task-queue test-utils/task-queue})]
-      (w/start workflow {:name "Bob"})
-      (is (= @(w/get-result workflow) "Hi, Bob")))))
+    (let [workflow (t/create-workflow greeter-workflow)]
+      (c/start workflow {:name "Bob"})
+      (is (= @(c/get-result workflow) "Hi, Bob")))))

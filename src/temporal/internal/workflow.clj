@@ -26,7 +26,6 @@
 (defn execute
   [ctx args]
   (let [{:keys [workflow-type] :as info} (get-info)
-        f (u/find-annotated-fn ::def workflow-type)
-        signals (s/create)]
+        f (u/find-annotated-fn ::def workflow-type)]
     (log/trace "execute:" info)
-    (u/wrap-encoded (fn [args] (f ctx {:args args :signals signals})) args)))
+    (u/wrap-encoded (fn [args] (f ctx {:args args :signals (s/create)})) args)))

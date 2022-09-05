@@ -17,6 +17,7 @@
          (fn [s]
            (let [ch (or (get-ch s signal-name)
                         (ConcurrentLinkedQueue.))]
+             (log/trace "saving signal:" signal-name payload)
              (.add ch payload)
              (assoc s signal-name ch)))))
 

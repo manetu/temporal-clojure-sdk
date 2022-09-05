@@ -16,3 +16,7 @@
    (Workflow/await (->supplier pred)))
   ([duration pred]
    (Workflow/await duration (->supplier pred))))
+
+(defn gen-uuid
+  []
+  (str (Workflow/randomUUID)))
