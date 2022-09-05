@@ -2,7 +2,7 @@
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
-  (:require [clojure.edn :as edn]
+  (:require [taoensso.nippy :as nippy]
             [promesa.core :as p]
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
@@ -87,8 +87,8 @@ defworkflow once the workflow concludes.
 ```
 "
   [{:keys [^WorkflowStub stub] :as workflow}]
-  (-> (.getResultAsync stub String)
-      (p/then edn/read-string)))
+  (-> (.getResultAsync stub u/bytes-type)
+      (p/then nippy/thaw)))
 
 (defn cancel
   "

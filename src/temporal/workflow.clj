@@ -6,11 +6,17 @@
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w]))
 
+(defn get-info
+  "
+Return info about the current workflow
+"
+  []
+  (w/get-info))
+
 (defmacro defworkflow
   "
 Defines a new workflow, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
-serializable with [prn-str](https://clojuredocs.org/clojure.core/prn-str), which will become available for
-[[temporal.client.workflow/get-result]].
+serializable, which will become available for [[temporal.client.workflow/get-result]].
 
 Arguments:
 

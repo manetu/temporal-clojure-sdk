@@ -2,8 +2,8 @@
 
 (ns temporal.activity
   "Methods for defining and invoking activity tasks"
-  (:require [clojure.edn :as edn]
-            [taoensso.timbre :as log]
+  (:require [taoensso.timbre :as log]
+            [taoensso.nippy :as nippy]
             [promesa.core :as p]
             [temporal.internal.activity :as a]
             [temporal.internal.utils :refer [->promise] :as u])
@@ -38,13 +38,13 @@ the evaluation of the defactivity once the activity concludes.
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedActivityStub (invoke-options-> options))]
      (-> (->promise
-          (.executeAsync stub act-name String (u/->objarray params)))
-         (p/then edn/read-string)))))
+          (.executeAsync stub act-name u/bytes-type (u/->objarray params)))
+         (p/then nippy/thaw)))))
 
 (defmacro defactivity
   "
 Defines a new activity, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
-serializable with [prn-str](https://clojuredocs.org/clojure.core/prn-str), which will be available to the [[invoke]] caller.
+serializable, which will be available to the [[invoke]] caller.
 
 Arguments:
 

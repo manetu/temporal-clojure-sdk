@@ -1,15 +1,15 @@
 ;; Copyright © 2022 Manetu, Inc.  All rights reserved
 
-(ns temporal.test.signal-with-start-test
+(ns temporal.test.signal-with-start
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
-            [temporal.client.core :as w]
+            [temporal.client.core :as c]
             [temporal.signals :refer [<!]]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]
-            [temporal.test.utils :as test-utils]))
+            [temporal.test.utils :as t]))
 
-(use-fixtures :once test-utils/wrap-service)
+(use-fixtures :once t/wrap-service)
 
 (def signal-name ::signal)
 
@@ -24,8 +24,8 @@
   (let [m (<! signals signal-name)]
     @(a/invoke greet-activity (merge args m))))
 
-(deftest basic-test
+(deftest the-test
   (testing "Verifies that we can round-trip through signal-with-start"
-    (let [workflow (w/create-workflow (test-utils/get-client) greeter-workflow {:task-queue test-utils/task-queue})]
-      (w/signal-with-start workflow signal-name {:name "Bob"} {:greeting "Hi"})
-      (is (= @(w/get-result workflow) "Hi, Bob")))))
+    (let [workflow (t/create-workflow greeter-workflow)]
+      (c/signal-with-start workflow signal-name {:name "Bob"} {:greeting "Hi"})
+      (is (= @(c/get-result workflow) "Hi, Bob")))))

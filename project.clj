@@ -14,7 +14,9 @@
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [io.temporal/temporal-sdk "1.16.0"]
                  [io.temporal/temporal-testing "1.16.0"]
+                 [com.taoensso/encore "3.24.0"]
                  [com.taoensso/timbre "5.2.1"]
+                 [com.taoensso/nippy "3.2.0"]
                  [funcool/promesa "8.0.450"]]
   :repl-options {:init-ns user}
   :aot [temporal.internal.dispatcher]
@@ -27,5 +29,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 91
+              :fail-threshold 92
               :ns-exclude-regex [#"temporal.client.worker"]})
