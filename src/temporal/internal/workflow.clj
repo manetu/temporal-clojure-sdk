@@ -4,6 +4,7 @@
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
             [taoensso.timbre :as log]
+            [taoensso.nippy :as nippy]
             [temporal.internal.common :as common]
             [temporal.internal.utils :as u]
             [temporal.internal.signals :as s])
@@ -42,7 +43,14 @@
 
 (defn execute
   [ctx args]
-  (let [{:keys [workflow-type] :as info} (get-info)
-        f (u/find-annotated-fn ::def workflow-type)]
-    (log/trace "execute:" info)
-    (u/wrap-encoded (fn [args] (f ctx {:args args :signals (s/create)})) args)))
+  (try
+    (let [{:keys [workflow-type workflow-id]} (get-info)
+          f (u/find-annotated-fn ::def workflow-type)
+          a (u/->args args)
+          _ (log/trace workflow-id "calling" f "with args:" a)
+          r (f ctx {:args a :signals (s/create)})]
+      (log/trace workflow-id "result:" r)
+      (nippy/freeze r))
+    (catch Exception e
+      (log/error e)
+      (throw e))))

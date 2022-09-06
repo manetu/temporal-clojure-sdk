@@ -4,7 +4,8 @@
   "Utilities common to all tests"
   (:require [taoensso.timbre :as log]
             [temporal.testing.env :as e]
-            [temporal.client.core :as c]))
+            [temporal.client.core :as c])
+  (:import [java.time Duration]))
 
 (log/set-level! :trace)
 
@@ -22,7 +23,7 @@
   (get @state :client))
 
 (defn create-workflow [workflow]
-  (c/create-workflow (get-client) workflow {:task-queue task-queue :retry-options {:maximum-attempts 1}}))
+  (c/create-workflow (get-client) workflow {:task-queue task-queue :workflow-execution-timeout (Duration/ofSeconds 1) :retry-options {:maximum-attempts 1}}))
 
 ;;-----------------------------------------------------------------------------
 ;; Fixtures
