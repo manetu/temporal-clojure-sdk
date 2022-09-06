@@ -37,7 +37,14 @@ the evaluation of the defactivity once the activity concludes.
 (defmacro defactivity
   "
 Defines a new activity, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
-serializable, which will be available to the [[invoke]] caller.
+serializable, which will be available to the [[invoke]] caller, or to a core.async channel (See Async Mode below).
+
+#### Async Mode:
+Returning a core.async channel places the activity into
+[Asynchronous](https://docs.temporal.io/java/activities/#asynchronous-activity-completion) mode, where the result may
+be resolved at a future time by sending a single message on the channel.  Sending a
+[Throwable](https://docs.oracle.com/javase/7/docs/api/java/lang/Throwable.html) will signal a failure of the activity.
+Any other value will be serialized and returned to the caller.
 
 Arguments:
 

@@ -3,11 +3,14 @@
 (ns ^:no-doc temporal.internal.activity
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
+            [clojure.core.async :refer [go <!] :as async]
             [taoensso.timbre :as log]
+            [taoensso.nippy :as nippy]
             [temporal.internal.utils :as u]
             [temporal.internal.common :as common])
   (:import [io.temporal.activity Activity ActivityInfo DynamicActivity]
-           [io.temporal.activity ActivityOptions ActivityOptions$Builder]))
+           [io.temporal.activity ActivityOptions ActivityOptions$Builder]
+           [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (def invoke-option-spec
   {:start-to-close-timeout #(.setStartToCloseTimeout ^ActivityOptions$Builder %1  %2)
@@ -35,12 +38,35 @@
   ^String [x]
   (u/get-annotation x ::def))
 
+(defn- export-result [activity-id x]
+  (log/trace activity-id "result:" x)
+  (nippy/freeze x))
+
+(defmulti result-> (fn [_ r] (type r)))
+
+(defmethod result-> ManyToManyChannel
+  [activity-id x]
+  (let [ctx        (Activity/getExecutionContext)
+        completion (.useLocalManualCompletion ctx)]
+    (go
+      (let [r (<! x)]
+        (if (instance? Throwable r)
+          (do
+            (log/error r)
+            (.fail completion r))
+          (.complete completion (export-result activity-id r)))))))
+
+(defmethod result-> :default
+  [activity-id x]
+  (export-result activity-id x))
+
 (defn- -execute
   [ctx args]
-  (let [{:keys [activity-type] :as info} (get-info)
-        f (u/find-annotated-fn ::def activity-type)]
-    (log/trace "execute:" info)
-    (u/wrap-encoded (partial f ctx) args)))
+  (let [{:keys [activity-type activity-id] :as info} (get-info)
+        f (u/find-annotated-fn ::def activity-type)
+        a (u/->args args)]
+    (log/trace activity-id "calling" f "with args:" a)
+    (result-> activity-id (f ctx a))))
 
 (defn dispatcher [ctx]
   (reify DynamicActivity

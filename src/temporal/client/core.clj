@@ -2,7 +2,8 @@
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
-  (:require [taoensso.nippy :as nippy]
+  (:require [taoensso.timbre :as log]
+            [taoensso.nippy :as nippy]
             [promesa.core :as p]
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
@@ -37,12 +38,14 @@ Create a new workflow-stub instance, suitable for managing and interacting with 
   [^WorkflowClient client workflow options]
   (let [wf-name (w/get-annotation workflow)
         stub    (.newUntypedWorkflowStub client wf-name (w/wf-options-> options))]
+    (log/trace "create-workflow:" wf-name options)
     {:client client :stub stub}))
 
 (defn start
   "
 Starts 'worklow' with 'params'"
   [{:keys [^WorkflowStub stub] :as workflow} params]
+  (log/trace "start:" params)
   (.start stub (u/->objarray params)))
 
 (defn signal-with-start
@@ -50,6 +53,7 @@ Starts 'worklow' with 'params'"
 Signals 'workflow' with 'signal-params' on signal 'signal-name', starting it if not already running.  'wf-params' are
 used as workflow start arguments if the workflow needs to be started"
   [{:keys [^WorkflowStub stub] :as workflow} signal-name signal-params wf-params]
+  (log/trace "signal-with-start->" "signal:" signal-name signal-params "workflow-params:" wf-params)
   (.signalWithStart stub (u/namify signal-name) (u/->objarray signal-params) (u/->objarray wf-params)))
 
 (defn >!
@@ -61,6 +65,7 @@ Sends 'params' as a signal 'signal-name' to 'workflow'
 ```
 "
   [{:keys [^WorkflowStub stub] :as workflow} signal-name params]
+  (log/trace ">!" signal-name params)
   (.signal stub (u/namify signal-name) (u/->objarray params)))
 
 (defn get-result

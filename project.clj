@@ -12,6 +12,7 @@
             [jonase/eastwood "1.2.4"]
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.11.1"]
+                 [org.clojure/core.async "1.5.648"]
                  [io.temporal/temporal-sdk "1.16.0"]
                  [io.temporal/temporal-testing "1.16.0"]
                  [com.taoensso/encore "3.24.0"]
@@ -29,5 +30,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 91
+              :fail-threshold 90
               :ns-exclude-regex [#"temporal.client.worker"]})

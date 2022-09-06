@@ -66,14 +66,6 @@
   [^EncodedValues args]
   (nippy/thaw (.get args (int 0) bytes-type)))
 
-(defn wrap-encoded
-  "Wraps 'f' in a codec, EncodedValues args in, and nippy-encoded bytes out"
-  [f args]
-  (-> args
-      (->args)
-      (f)
-      (nippy/freeze)))
-
 (def namify
   "Converts strings or keywords to strings, preserving fully qualified keywords when applicable"
   (memoize
