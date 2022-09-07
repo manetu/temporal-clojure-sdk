@@ -16,17 +16,22 @@ Return info about the current workflow
 (defmacro defworkflow
   "
 Defines a new workflow, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
-serializable, which will become available for [[temporal.client.workflow/get-result]].
+serializable, which will become available for [[temporal.client.core/get-result]].
 
 Arguments:
 
 - `ctx`: Context passed through from [[temporal.client.worker/start]]
-- `args`: Passed from 'params' to [[temporal.client.workflow/start]] or [[temporal.client.workflow/signal-with-start]]
+- `params`: A map containing the following
+    - `args`: Passed from 'params' to [[temporal.client.core/start]] or [[temporal.client.core/signal-with-start]]
+    - `signals`: Signal context for use with signal calls such as [[temporal.signals/<!]] and [[temporal.signals/poll]]
 
 ```clojure
 (defworkflow my-workflow
-    [ctx args]
+    [ctx {{:keys [foo]} :args}]
     ...)
+
+(let [w (create-workflow client my-workflow {:task-queue ::my-task-queue})]
+   (start w {:foo \"bar\"}))
 ```
 "
   [name params* & body]
