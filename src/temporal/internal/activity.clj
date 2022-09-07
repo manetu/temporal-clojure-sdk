@@ -66,7 +66,11 @@
         f (u/find-annotated-fn ::def activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
-    (result-> activity-id (f ctx a))))
+    (try
+      (result-> activity-id (f ctx a))
+      (catch Exception e
+        (log/error e)
+        (throw e)))))
 
 (defn dispatcher [ctx]
   (reify DynamicActivity
