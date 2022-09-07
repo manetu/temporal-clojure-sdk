@@ -4,8 +4,18 @@
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
             [taoensso.timbre :as log]
-            [temporal.internal.utils :as u])
-  (:import [io.temporal.activity Activity ActivityInfo DynamicActivity]))
+            [temporal.internal.utils :as u]
+            [temporal.internal.common :as common])
+  (:import [io.temporal.activity Activity ActivityInfo DynamicActivity]
+           [io.temporal.activity ActivityOptions ActivityOptions$Builder]))
+
+(def invoke-option-spec
+  {:start-to-close-timeout #(.setStartToCloseTimeout ^ActivityOptions$Builder %1  %2)
+   :retry-options          #(.setRetryOptions %1 (common/retry-options-> %2))})
+
+(defn invoke-options->
+  ^ActivityOptions [params]
+  (u/build (ActivityOptions/newBuilder) invoke-option-spec params))
 
 (extend-protocol p/Datafiable
   ActivityInfo

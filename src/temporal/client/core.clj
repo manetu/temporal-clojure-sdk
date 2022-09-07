@@ -6,7 +6,7 @@
             [promesa.core :as p]
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.client WorkflowClient WorkflowStub WorkflowOptions WorkflowOptions$Builder]
+  (:import [io.temporal.client WorkflowClient WorkflowStub]
            [io.temporal.serviceclient WorkflowServiceStubs]))
 
 (defn create-client
@@ -17,14 +17,6 @@ workflow clients (See [[create-workflow]]).
   []
   (let [service (WorkflowServiceStubs/newLocalServiceStubs)]
     (WorkflowClient/newInstance service)))
-
-(def ^:no-doc wf-option-spec
-  {:task-queue #(.setTaskQueue ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id #(.setWorkflowId ^WorkflowOptions$Builder %1 %2)})
-
-(defn- wf-options->
-  ^WorkflowOptions [params]
-  (u/build (WorkflowOptions/newBuilder) wf-option-spec params))
 
 (defn create-workflow
   "
@@ -44,7 +36,7 @@ Create a new workflow-stub instance, suitable for managing and interacting with 
 "
   [^WorkflowClient client workflow options]
   (let [wf-name (w/get-annotation workflow)
-        stub    (.newUntypedWorkflowStub client wf-name (wf-options-> options))]
+        stub    (.newUntypedWorkflowStub client wf-name (w/wf-options-> options))]
     {:client client :stub stub}))
 
 (defn start

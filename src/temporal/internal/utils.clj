@@ -18,10 +18,13 @@
 (def ^Class bytes-type (Class/forName "[B"))
 
 (defn build [builder spec params]
-  (doseq [[key value] params]
-    (log/trace "building" builder "->" key "=" value)
-    ((get spec key) builder value))
-  (.build builder))
+  (try
+    (doseq [[key value] params]
+      (log/trace "building" builder "->" key "=" value)
+      ((get spec key) builder value))
+    (.build builder)
+    (catch Exception e
+      (log/error e))))
 
 (defn get-annotation
   "Retrieves metadata annotation 'a' from 'v'"
@@ -102,8 +105,16 @@
     (apply [_ x1 x2 x3 x4 x5 x6]
       (f x1 x2 x3 x4 x5 x6))))
 
-(defn ->promise
-  [^Promise p]
+(defn promise-impl
+  [f]
   (p/create
    (fn [resolve reject]
-     (resolve (.get p)))))
+     (try
+       (let [^Promise p (f)]
+         (resolve (.get p)))
+       (catch Exception e
+         (reject e))))))
+
+(defmacro ->promise
+  [& body]
+  `(promise-impl (fn [] (do ~@body))))

@@ -22,7 +22,7 @@
   (get @state :client))
 
 (defn create-workflow [workflow]
-  (c/create-workflow (get-client) workflow {:task-queue task-queue}))
+  (c/create-workflow (get-client) workflow {:task-queue task-queue :retry-options {:maximum-attempts 1}}))
 
 ;;-----------------------------------------------------------------------------
 ;; Fixtures

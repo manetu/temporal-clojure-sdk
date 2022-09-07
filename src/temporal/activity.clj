@@ -8,15 +8,7 @@
             [temporal.internal.activity :as a]
             [temporal.internal.utils :refer [->promise] :as u])
   (:import [io.temporal.workflow Workflow]
-           [io.temporal.activity ActivityOptions ActivityOptions$Builder]
            [java.time Duration]))
-
-(def ^:no-doc invoke-option-spec
-  {:start-to-close-timeout #(.setStartToCloseTimeout ^ActivityOptions$Builder %1  %2)})
-
-(defn- invoke-options->
-  ^ActivityOptions [params]
-  (u/build (ActivityOptions/newBuilder) invoke-option-spec params))
 
 (def ^:no-doc default-invoke-options {:start-to-close-timeout (Duration/ofSeconds 3)})
 
@@ -36,7 +28,8 @@ the evaluation of the defactivity once the activity concludes.
   ([activity params] (invoke activity params default-invoke-options))
   ([activity params options]
    (let [act-name (a/get-annotation activity)
-         stub (Workflow/newUntypedActivityStub (invoke-options-> options))]
+         stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
+     (log/trace "invoke:" activity "with" params options)
      (-> (->promise
           (.executeAsync stub act-name u/bytes-type (u/->objarray params)))
          (p/then nippy/thaw)))))
