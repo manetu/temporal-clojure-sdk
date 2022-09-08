@@ -1,7 +1,8 @@
 ;; Copyright © 2022 Manetu, Inc.  All rights reserved
 
 (ns ^:no-doc temporal.internal.promise
-  (:require [promesa.protocols :as pt]
+  (:require [taoensso.timbre :as log]
+            [promesa.protocols :as pt]
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
@@ -17,6 +18,9 @@
 
 (defmethod ->temporal Promise
   [x] x)
+
+(defmethod ->temporal PromiseAdapter
+  [x] (.p x))
 
 (defmethod ->temporal CompletableFuture
   [^CompletableFuture x]
@@ -44,13 +48,13 @@
   PromiseAdapter
   (-map
     ([it f]
-     (.thenApply ^Promise (.p it) (->Func f)))
+     (pt/-promise (.thenApply ^Promise (.p it) (->Func (comp ->temporal f)))))
 
     ([it f executor]))
 
   (-bind
     ([it f]
-     (.thenCompose ^Promise (.p it) (->Func f)))
+     (pt/-promise (.thenCompose ^Promise (.p it) (->Func (comp ->temporal f)))))
 
     ([it f executor]))
 
@@ -75,12 +79,13 @@
      (letfn [(handler [v e]
                (if e
                  (if (instance? Promise e)
-                   (pt/-promise (f (.getFailure e)))
-                   (pt/-promise (f e)))
-                 it))]
+                   (->temporal (f (.getFailure e)))
+                   (->temporal (f e)))
+                 (.p it)))]
        (as-> ^Promise (.p it) $$
          (.handle $$ (->Func handler))
-         (.thenCompose $$ fw-identity))))
+         (.thenCompose $$ fw-identity)
+         (pt/-promise $$))))
 
     ([it f executor]))
 
@@ -88,7 +93,8 @@
     ([it f]
      (as-> ^Promise (.p it) $$
        (.handle $$ (->Func (comp ->temporal f)))
-       (.thenCompose $$ fw-identity)))
+       (.thenCompose $$ fw-identity)
+       (pt/-promise $$)))
 
     ([it f executor]))
 

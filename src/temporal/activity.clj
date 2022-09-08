@@ -32,7 +32,14 @@ the evaluation of the defactivity once the activity concludes.
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
      (log/trace "invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
-         (p/then nippy/thaw)))))
+         (p/then (fn [r]
+                   (log/trace activity "completed with" (count r) "bytes")
+                   (let [r (nippy/thaw r)]
+                     (log/trace activity "results:" r)
+                     r)))
+         (p/catch (fn [e]
+                    (log/error e)
+                    (throw e)))))))
 
 (defmacro defactivity
   "
