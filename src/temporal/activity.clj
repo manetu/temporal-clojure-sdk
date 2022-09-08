@@ -6,7 +6,8 @@
             [taoensso.nippy :as nippy]
             [promesa.core :as p]
             [temporal.internal.activity :as a]
-            [temporal.internal.utils :refer [->promise] :as u])
+            [temporal.internal.utils :as u]
+            [temporal.internal.promise])                    ;; needed for IPromise protocol extention
   (:import [io.temporal.workflow Workflow]
            [java.time Duration]))
 
@@ -30,8 +31,7 @@ the evaluation of the defactivity once the activity concludes.
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
      (log/trace "invoke:" activity "with" params options)
-     (-> (->promise
-          (.executeAsync stub act-name u/bytes-type (u/->objarray params)))
+     (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
          (p/then nippy/thaw)))))
 
 (defmacro defactivity

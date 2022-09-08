@@ -3,11 +3,9 @@
 (ns ^:no-doc temporal.internal.utils
   (:require [clojure.string :as string]
             [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
-            [promesa.core :as p])
+            [taoensso.nippy :as nippy])
   (:import [io.temporal.common.converter EncodedValues]
-           [io.temporal.workflow Promise
-            Functions$Func
+           [io.temporal.workflow Functions$Func
             Functions$Func1
             Functions$Func2
             Functions$Func3
@@ -96,17 +94,3 @@
     Functions$Func6
     (apply [_ x1 x2 x3 x4 x5 x6]
       (f x1 x2 x3 x4 x5 x6))))
-
-(defn promise-impl
-  [f]
-  (p/create
-   (fn [resolve reject]
-     (try
-       (let [^Promise p (f)]
-         (resolve (.get p)))
-       (catch Exception e
-         (reject e))))))
-
-(defmacro ->promise
-  [& body]
-  `(promise-impl (fn [] (do ~@body))))
