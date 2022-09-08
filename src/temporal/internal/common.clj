@@ -1,6 +1,6 @@
 ;; Copyright © 2022 Manetu, Inc.  All rights reserved
 
-(ns temporal.internal.common
+(ns ^:no-doc temporal.internal.common
   (:require [temporal.internal.utils :as u])
   (:import [io.temporal.common RetryOptions RetryOptions$Builder]))
 
