@@ -23,7 +23,7 @@
   (get @state :client))
 
 (defn create-workflow [workflow]
-  (c/create-workflow (get-client) workflow {:task-queue task-queue :workflow-execution-timeout (Duration/ofSeconds 1) :retry-options {:maximum-attempts 1}}))
+  (c/create-workflow (get-client) workflow {:task-queue task-queue :workflow-execution-timeout (Duration/ofSeconds 10) :retry-options {:maximum-attempts 1}}))
 
 ;;-----------------------------------------------------------------------------
 ;; Fixtures
