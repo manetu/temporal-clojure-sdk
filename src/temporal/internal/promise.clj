@@ -3,6 +3,7 @@
 (ns ^:no-doc temporal.internal.promise
   (:require [taoensso.timbre :as log]
             [promesa.protocols :as pt]
+            [promesa.util :as pu]
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
@@ -26,13 +27,9 @@
   [^CompletableFuture x]
   (reify Promise
     (get [_] (.get x))
-    (isCompleted [_] (.isDone x))
     (handle [_ f]
-      (try
-        (let [r (.get x)]
-          (.apply f r nil))
-        (catch Exception e
-          (.apply f nil e))))))
+      (->temporal (.handle x (pu/->BiFunctionWrapper (fn [v e] (.apply f v e))))))
+    (isCompleted [_] (.isDone x))))
 
 (defmethod ->temporal :default
   [x]
