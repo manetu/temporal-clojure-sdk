@@ -2,8 +2,11 @@
 
 (ns temporal.test.types
   (:require [clojure.test :refer :all]
+            [temporal.client.core :as client]
             [temporal.internal.workflow :as workflow])
-  (:import [java.time Duration]))
+  (:import [java.time Duration]
+           [io.grpc Grpc InsecureChannelCredentials Metadata]
+           [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
 
 (deftest workflow-options
   (testing "Verify that our workflow options work"
@@ -18,3 +21,32 @@
                                     :search-attributes {"foo" "bar"}})]
       (is (-> x (.getWorkflowId) (= "foo")))
       (is (-> x (.getTaskQueue) (= "bar"))))))
+
+(deftest client-options
+  (testing "Verify that our stub options work"
+    (let [x (client/stub-options-> {:channel                    (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create))
+                                                                    (.build))
+                                    :ssl-context              (-> (GrpcSslContexts/forClient)
+                                                                  (.build))
+                                    :target                   "foo:1234"
+                                    :enable-https             false
+                                    :rpc-timeout              (Duration/ofSeconds 1)
+                                    :rpc-long-poll-timeout    (Duration/ofSeconds 1)
+                                    :rpc-query-timeout        (Duration/ofSeconds 1)
+                                    :backoff-reset-freq       (Duration/ofSeconds 1)
+                                    :grpc-reconnect-freq      (Duration/ofSeconds 1)
+                                    :headers                  (Metadata.)
+                                    :enable-keepalive         true
+                                    :keepalive-time           (Duration/ofSeconds 1)
+                                    :keepalive-timeout        (Duration/ofSeconds 1)
+                                    :keepalive-without-stream true})]
+      (is (-> x (.getTarget) (= "foo:1234")))))
+  (testing "Verify that our client options work"
+    (let [x (client/client-options-> {:identity "test"
+                                      :namespace "test"})]
+      (is (-> x (.getIdentity) (= "test")))
+      (is (-> x (.getNamespace) (= "test")))))
+  (testing "Verify that mixed client/stub options work"
+    (let [options {:target "foo:1234" :namespace "default"}]
+      (is (some? (client/stub-options-> options)))
+      (is (some? (client/client-options-> options))))))

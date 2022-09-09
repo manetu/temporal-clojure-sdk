@@ -18,8 +18,11 @@
 (defn build [builder spec params]
   (try
     (doseq [[key value] params]
-      (log/trace "building" builder "->" key "=" value)
-      ((get spec key) builder value))
+      (if-let [f (get spec key)]
+        (do
+          (log/trace "building" builder "->" key "=" value)
+          (f builder value))
+        (log/trace "skipping" key)))
     (.build builder)
     (catch Exception e
       (log/error e))))
