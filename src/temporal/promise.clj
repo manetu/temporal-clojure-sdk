@@ -5,7 +5,7 @@
   (:require [promesa.core :as p]
             [temporal.internal.promise :as pt])
   (:import [temporal.internal.promise PromiseAdapter]
-           [io.temporal.workflow Promise]))
+           [io.temporal.workflow Workflow Promise]))
 
 (defn- ->array
   ^"[Lio.temporal.workflow.Promise;" [coll]
@@ -45,3 +45,13 @@ promises returned from [[temporal.activity/invoke]] from within workflow context
 "
   [coll]
   (pt/->PromiseAdapter (Promise/anyOf (->array coll))))
+
+(defn resolved
+  "Returns a new, fully resolved promise"
+  [value]
+  (Workflow/newPromise value))
+
+(defn rejected
+  "Returns a new, rejected promise"
+  [^Exception e]
+  (Workflow/newFailedPromise e))
