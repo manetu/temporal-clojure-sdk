@@ -7,17 +7,77 @@
             [promesa.core :as p]
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.client WorkflowClient WorkflowStub]
-           [io.temporal.serviceclient WorkflowServiceStubs]))
+  (:import [java.time Duration]
+           [io.temporal.client WorkflowClient WorkflowClientOptions WorkflowClientOptions$Builder WorkflowStub]
+           [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]))
+
+(def ^:no-doc stub-options
+  {:channel                  #(.setChannel ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :ssl-context              #(.setSslContext ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :enable-https             #(.setEnableHttps ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :target                   #(.setTarget ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :rpc-timeout              #(.setRpcTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :rpc-long-poll-timeout    #(.setRpcLongPollTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :rpc-query-timeout        #(.setRpcQueryTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :backoff-reset-freq       #(.setConnectionBackoffResetFrequency ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :grpc-reconnect-freq      #(.setGrpcReconnectFrequency ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :headers                  #(.setHeaders ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :enable-keepalive         #(.setEnableKeepAlive ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :keepalive-time           #(.setKeepAliveTime ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :keepalive-timeout        #(.setKeepAliveTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :keepalive-without-stream #(.setKeepAlivePermitWithoutStream ^WorkflowServiceStubsOptions$Builder %1 %2)})
+
+(defn ^:no-doc stub-options->
+  ^WorkflowServiceStubsOptions [params]
+  (u/build (WorkflowServiceStubsOptions/newBuilder) stub-options params))
+
+(def ^:no-doc client-options
+  {:identity                  #(.setIdentity ^WorkflowClientOptions$Builder %1 %2)
+   :namespace                 #(.setNamespace ^WorkflowClientOptions$Builder %1 %2)})
+
+(defn ^:no-doc client-options->
+  ^WorkflowClientOptions [params]
+  (u/build (WorkflowClientOptions/newBuilder) client-options params))
 
 (defn create-client
   "
 Creates a new client instance suitable for implementing Temporal workers (See [[temporal.client.worker/start]]) or
 workflow clients (See [[create-workflow]]).
+
+Arguments:
+
+- `options`: Client configuration option map (See below)
+- `timeout`: Connection timeout as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) (default: 5s)
+
+#### options map
+
+
+| Value                     | Description                                                                 | Type         | Default |
+| ------------------------- | --------------------------------------------------------------------------- | ------------ | ------- |
+| :target                   | Sets the connection host:port                                               | String       | \"127.0.0.1:7233\" |
+| :identity                 | Overrides the worker node identity (workers only)                           | String       | |
+| :namespace                | Sets the Temporal namespace context for this client                         | String       | |
+| :channel                  | Sets gRPC channel to use. Exclusive with target and sslContext              | [ManagedChannel](https://grpc.github.io/grpc-java/javadoc/io/grpc/ManagedChannel.html) | |
+| :ssl-context              | Sets gRPC SSL Context to use                                                | [SslContext](https://netty.io/4.0/api/io/netty/handler/ssl/SslContext.html) | |
+| :enable-https             | Sets option to enable SSL/TLS/HTTPS for gRPC                                | boolean      | false |
+| :rpc-timeout              | Sets the rpc timeout value for non query and non long poll calls            | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
+| :rpc-long-poll-timeout    | Sets the rpc timeout value                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 60s |
+| :rpc-query-timeout        | Sets the rpc timeout for queries                                            | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
+| :backoff-reset-freq       | Sets frequency at which gRPC connection backoff should be reset practically | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
+| :grpc-reconnect-freq      | Sets frequency at which gRPC channel will be moved into an idle state       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 60s |
+| :headers                  | Set the headers                                                             | [Metadata](https://grpc.github.io/grpc-java/javadoc/io/grpc/Metadata.html) | |
+| :enable-keepalive         | Set keep alive ping from client to the server                               | boolean       | false |
+| :keepalive-time           | Set the keep alive time                                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :keepalive-timeout        | Set the keep alive timeout                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :keepalive-without-stream | Set if client sends keepalive pings even with no active RPCs                | boolean       | false |
+
 "
-  []
-  (let [service (WorkflowServiceStubs/newLocalServiceStubs)]
-    (WorkflowClient/newInstance service)))
+  ([] (create-client {}))
+  ([options]
+   (create-client options (Duration/ofSeconds 5)))
+  ([options timeout]
+   (let [service (WorkflowServiceStubs/newConnectedServiceStubs (stub-options-> options) timeout)]
+     (WorkflowClient/newInstance service (client-options-> options)))))
 
 (defn create-workflow
   "
