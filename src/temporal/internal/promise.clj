@@ -28,7 +28,7 @@
   (reify Promise
     (get [_] (.get x))
     (handle [_ f]
-      (->temporal (.handle x (pu/->BiFunctionWrapper (fn [v e] (.apply f v e))))))
+      (.handle x (pu/->BiFunctionWrapper (fn [v e] (.apply f v e)))))
     (isCompleted [_] (.isDone x))))
 
 (defmethod ->temporal :default
