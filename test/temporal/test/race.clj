@@ -26,10 +26,13 @@
   [ctx {:keys [args]}]
   (log/info "workflow:" args)
   ;; invoke activities with various synthetic delays.  The last entry, index 4, should be the fastest
-  @(-> (pt/race (map-indexed (fn [i x] (invoke {:id i :delay x})) [600 400 200 100 10]))
-       (p/then (fn [r]
-                 (log/info "r:" r)
-                 r))))
+  (let [requests (map-indexed (fn [i x] (invoke {:id i :delay x})) [600 400 200 100 10])]
+    @(-> (pt/race requests)
+         (p/then (fn [fastest]
+                   (log/info "fastest is:" fastest)
+                   ;; wait for the others to catch up to avoid io.temporal.client.ActivityNotExistsException when the UT env shuts down
+                   (-> (pt/all requests)
+                       (p/then (constantly fastest))))))))
 
 (deftest the-test
   (testing "Verifies that we can launch activities in parallel"
