@@ -20,7 +20,8 @@
                  [com.taoensso/nippy "3.2.0"]
                  [funcool/promesa "8.0.450"]]
   :repl-options {:init-ns user}
-  :aot [temporal.internal.dispatcher]
+  :java-source-paths ["src"]
+  :javac-options ["-target" "11" "-source" "11"]
 
   :eastwood {:add-linters [:unused-namespaces]}
   :codox {:metadata {:doc/format :markdown}}
@@ -30,5 +31,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 86
+              :fail-threshold 85
               :ns-exclude-regex [#"temporal.client.worker"]})

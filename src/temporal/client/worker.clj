@@ -3,17 +3,25 @@
 (ns temporal.client.worker
   "Methods for managing a Temporal worker instance"
   (:require [temporal.internal.activity :as a]
+            [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
   (:import [io.temporal.worker Worker WorkerFactory]
-           [temporal.internal.dispatcher WorkflowImpl]))
+           [temporal.internal.dispatcher DynamicWorkflowProxy]
+           [io.temporal.workflow DynamicWorkflow]))
 
 (defn ^:no-doc  init
   "
 Initializes a worker instance, suitable for real connections or unit-testing with temporal.testing.env
 "
   [^Worker worker ctx]
-  (.addWorkflowImplementationFactory worker WorkflowImpl (u/->Func (fn [] (new WorkflowImpl ctx))))
-  (.registerActivitiesImplementations worker (to-array [(a/dispatcher ctx)])))
+  (.registerActivitiesImplementations worker (to-array [(a/dispatcher ctx)]))
+  (.addWorkflowImplementationFactory worker DynamicWorkflowProxy
+                                     (u/->Func
+                                      (fn []
+                                        (new DynamicWorkflowProxy
+                                             (reify DynamicWorkflow
+                                               (execute [_ args]
+                                                 (w/execute ctx args))))))))
 
 (defn start
   "
