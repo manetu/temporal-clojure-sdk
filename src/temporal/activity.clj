@@ -13,6 +13,13 @@
 
 (def ^:no-doc default-invoke-options {:start-to-close-timeout (Duration/ofSeconds 3)})
 
+(defn- complete-invoke
+  [activity result]
+  (log/trace activity "completed with" (count result) "bytes")
+  (let [r (nippy/thaw result)]
+    (log/trace activity "results:" r)
+    r))
+
 (defn invoke
   "
 Invokes 'activity' with 'params' from within a workflow context.  Returns a promise that when derefed will resolve to
@@ -32,11 +39,31 @@ the evaluation of the defactivity once the activity concludes.
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
      (log/trace "invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
-         (p/then (fn [r]
-                   (log/trace activity "completed with" (count r) "bytes")
-                   (let [r (nippy/thaw r)]
-                     (log/trace activity "results:" r)
-                     r)))
+         (p/then (partial complete-invoke activity))
+         (p/catch (fn [e]
+                    (log/error e)
+                    (throw e)))))))
+
+(defn local-invoke
+  "
+Invokes 'activity' with 'params' from within a workflow context as a [Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/).  Returns a promise that when
+derefed will resolve to the evaluation of the defactivity once the activity concludes.
+
+```clojure
+(defactivity my-activity
+   [ctx {:keys [foo] :as args}]
+   ...)
+
+(local-invoke my-activity {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
+```
+"
+  ([activity params] (invoke activity params default-invoke-options))
+  ([activity params options]
+   (let [act-name (a/get-annotation activity)
+         stub (Workflow/newUntypedLocalActivityStub (a/local-invoke-options-> options))]
+     (log/trace "local-invoke:" activity "with" params options)
+     (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
+         (p/then (partial complete-invoke activity))
          (p/catch (fn [e]
                     (log/error e)
                     (throw e)))))))
