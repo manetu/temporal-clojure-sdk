@@ -9,16 +9,27 @@
             [temporal.internal.utils :as u]
             [temporal.internal.common :as common])
   (:import [io.temporal.activity Activity ActivityInfo DynamicActivity]
-           [io.temporal.activity ActivityOptions ActivityOptions$Builder]
+           [io.temporal.activity ActivityOptions ActivityOptions$Builder LocalActivityOptions LocalActivityOptions$Builder]
            [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (def invoke-option-spec
   {:start-to-close-timeout #(.setStartToCloseTimeout ^ActivityOptions$Builder %1  %2)
-   :retry-options          #(.setRetryOptions %1 (common/retry-options-> %2))})
+   :retry-options          #(.setRetryOptions ^ActivityOptions$Builder %1 (common/retry-options-> %2))})
 
 (defn invoke-options->
   ^ActivityOptions [params]
   (u/build (ActivityOptions/newBuilder) invoke-option-spec params))
+
+(def local-invoke-option-spec
+  {:start-to-close-timeout    #(.setStartToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
+   :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
+   :retry-options             #(.setRetryOptions ^LocalActivityOptions$Builder %1 (common/retry-options-> %2))
+   :do-not-include-args       #(.setDoNotIncludeArgumentsIntoMarker ^LocalActivityOptions$Builder %1 %2)
+   :local-retry-threshold     #(.setLocalRetryThreshold ^LocalActivityOptions$Builder %1 %2)})
+
+(defn local-invoke-options->
+  ^LocalActivityOptions [params]
+  (u/build (LocalActivityOptions/newBuilder) local-invoke-option-spec params))
 
 (extend-protocol p/Datafiable
   ActivityInfo
