@@ -35,10 +35,23 @@ Arguments:
 
 (defn stop
   "
-Stops the test environment created by [[create]].
+Stops the test environment created by [[create]].  Does not wait for shutdown to complete.  For coordinated shutdown,
+see [[synchronized-stop]].
 
 ```clojure
 (stop instance)
+```
+"
+  [{:keys [^TestWorkflowEnvironment env]}]
+  (.shutdown env))
+
+(defn synchronized-stop
+  "
+Stops the test environment created by [[create]].  Blocks until the environment has shut down.  For async termination,
+see [[stop]]
+
+```clojure
+(synchronized-stop instance)
 ```
 "
   [{:keys [^TestWorkflowEnvironment env]}]
