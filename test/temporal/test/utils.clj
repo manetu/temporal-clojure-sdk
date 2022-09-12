@@ -29,7 +29,7 @@
 ;; Fixtures
 ;;-----------------------------------------------------------------------------
 (defn create-service []
-  (let [{:keys [client] :as env} (e/create task-queue)]
+  (let [{:keys [client] :as env} (e/create {:queue-name task-queue})]
     (swap! state assoc
            :env env
            :client client)))
