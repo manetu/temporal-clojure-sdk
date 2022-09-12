@@ -10,18 +10,18 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity greet-activity
+(defactivity local-greet-activity
   [ctx {:keys [name] :as args}]
   (log/info "greet-activity:" args)
   (str "Hi, " name))
 
-(defworkflow greeter-workflow
+(defworkflow local-greeter-workflow
   [ctx {:keys [args]}]
   (log/info "greeter-workflow:" args)
-  @(a/local-invoke greet-activity args (assoc a/default-invoke-options :do-not-include-args true)))
+  @(a/local-invoke local-greet-activity args (assoc a/default-invoke-options :do-not-include-args true)))
 
 (deftest the-test
   (testing "Verifies that we can round-trip through start"
-    (let [workflow (t/create-workflow greeter-workflow)]
+    (let [workflow (t/create-workflow local-greeter-workflow)]
       (c/start workflow {:name "Bob"})
       (is (= @(c/get-result workflow) "Hi, Bob")))))

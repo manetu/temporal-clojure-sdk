@@ -35,9 +35,10 @@ Arguments:
 ```
 "
   [name params* & body]
-  (let [class-name (u/get-classname name)]
-    `(def ~name ^{::w/def ~class-name}
+  (let [fqn (u/get-fq-classname name)
+        sname (str name)]
+    `(def ~name ^{::w/def {:name ~sname :fqn ~fqn}}
        (fn [ctx# args#]
-         (log/trace (str ~class-name ": ") args#)
+         (log/trace (str ~fqn ": ") args#)
          (let [f# (fn ~params* (do ~@body))]
            (f# ctx# args#))))))

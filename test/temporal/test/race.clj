@@ -12,7 +12,7 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity delayed-activity
+(defactivity race-activity
   [ctx {:keys [id delay] :as args}]
   (log/info "activity:" args)
   (go
@@ -20,7 +20,7 @@
     id))
 
 (defn invoke [x]
-  (a/invoke delayed-activity x))
+  (a/invoke race-activity x))
 
 (defworkflow race-workflow
   [ctx {:keys [args]}]

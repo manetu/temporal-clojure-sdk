@@ -10,14 +10,14 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defworkflow test-workflow
+(defworkflow uuid-workflow
   [ctx args]
-  (log/info "the-workflow:" args)
+  (log/info "workflow:" args)
   (core/gen-uuid))
 
 (deftest the-test
   (testing "Verifies that we can use the side-effect safe gen-uuid"
-    (let [workflow (t/create-workflow test-workflow)]
+    (let [workflow (t/create-workflow uuid-workflow)]
       (c/start workflow {})
       (let [r  @(c/get-result workflow)]
         (log/debug "r:" r)

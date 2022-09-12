@@ -12,13 +12,13 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity echo-activity
+(defactivity concurrency-activity
   [ctx args]
   (log/info "activity:" args)
   args)
 
 (defn invoke [x]
-  (a/invoke echo-activity x))
+  (a/invoke concurrency-activity x))
 
 (defworkflow concurrency-workflow
   [ctx {:keys [args]}]
