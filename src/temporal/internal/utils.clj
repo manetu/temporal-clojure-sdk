@@ -28,7 +28,7 @@
     (catch Exception e
       (log/error e))))
 
-(defn- get-annotation
+(defn get-annotation
   "Retrieves metadata annotation 'a' from 'v'"
   [v a]
   (-> v meta a))
@@ -76,11 +76,19 @@
        (verify-registered-fns data)
        (m/index-by :name data)))))
 
-(defn find-annotated-fn
+(defn find-dispatch-fn
   "Finds any functions named 't' that carry metadata 'marker'"
-  [marker t]
-  (:fn (or (get (get-annotated-fns marker) t)
+  [dispatch-table t]
+  (:fn (or (get dispatch-table t)
            (throw (ex-info "workflow/activity not found" {:function t})))))
+
+(defn import-dispatch
+  [marker coll]
+  (reduce (fn [acc s]
+            (let [{:keys [name] :as x} (get-annotation s marker)]
+              (assoc acc name (assoc x :fn s))))
+          {}
+          coll))
 
 (defn get-fq-classname
   "Returns the fully qualified classname for 'sym'"

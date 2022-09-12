@@ -49,6 +49,14 @@
   ^String [x]
   (u/get-annotated-name x ::def))
 
+(defn auto-dispatch
+  []
+  (u/get-annotated-fns ::def))
+
+(defn import-dispatch
+  [syms]
+  (u/import-dispatch ::def syms))
+
 (defn- export-result [activity-id x]
   (log/trace activity-id "result:" x)
   (nippy/freeze x))
@@ -72,9 +80,9 @@
   (export-result activity-id x))
 
 (defn- -execute
-  [ctx args]
+  [ctx dispatch args]
   (let [{:keys [activity-type activity-id] :as info} (get-info)
-        f (u/find-annotated-fn ::def activity-type)
+        f (u/find-dispatch-fn dispatch activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
     (try
@@ -83,7 +91,7 @@
         (log/error e)
         (throw e)))))
 
-(defn dispatcher [ctx]
+(defn dispatcher [ctx dispatch]
   (reify DynamicActivity
     (execute [_ args]
-      (-execute ctx args))))
+      (-execute ctx dispatch args))))

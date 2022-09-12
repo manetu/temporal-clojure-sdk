@@ -41,11 +41,19 @@
   ^String [x]
   (u/get-annotated-name x ::def))
 
+(defn auto-dispatch
+  []
+  (u/get-annotated-fns ::def))
+
+(defn import-dispatch
+  [syms]
+  (u/import-dispatch ::def syms))
+
 (defn execute
-  [ctx args]
+  [ctx dispatch args]
   (try
     (let [{:keys [workflow-type workflow-id]} (get-info)
-          f (u/find-annotated-fn ::def workflow-type)
+          f (u/find-dispatch-fn dispatch workflow-type)
           a (u/->args args)
           _ (log/trace workflow-id "calling" f "with args:" a)
           r (f ctx {:args a :signals (s/create)})]
