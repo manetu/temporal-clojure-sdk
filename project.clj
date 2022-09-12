@@ -18,7 +18,8 @@
                  [com.taoensso/encore "3.24.0"]
                  [com.taoensso/timbre "5.2.1"]
                  [com.taoensso/nippy "3.2.0"]
-                 [funcool/promesa "8.0.450"]]
+                 [funcool/promesa "8.0.450"]
+                 [medley "1.4.0"]]
   :repl-options {:init-ns user}
   :java-source-paths ["src"]
   :javac-options ["-target" "11" "-source" "11"]

@@ -2,6 +2,7 @@
 
 (ns ^:no-doc temporal.internal.utils
   (:require [clojure.string :as string]
+            [medley.core :as m]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy])
   (:import [io.temporal.common.converter EncodedValues]
@@ -27,29 +28,61 @@
     (catch Exception e
       (log/error e))))
 
-(defn get-annotation
+(defn- get-annotation
   "Retrieves metadata annotation 'a' from 'v'"
-  ^String [v a]
+  [v a]
   (-> v meta a))
 
-(def find-annotated-fns
+(defn get-annotated-name
+  ^String [v a]
+  (let [x (get-annotation v a)]
+    (or (:name x)
+        (throw (ex-info "bad symbol" {:message (str v "does not appear to be a valid symbol")})))))
+
+(defn find-annotated-fns
   "Finds all instances of functions annotated with 'marker' via metadata and returns a [name fn] map"
+  [marker]
+  (->> (all-ns)
+       (mapcat (comp vals ns-interns ns-name))
+       (reduce (fn [acc x]
+                 (let [v (var-get x)
+                       m (get-annotation v marker)]
+                   (cond-> acc
+                     (some? m) (conj (assoc m :fn v))))) [])))
+
+(defn frequencies-by
+  "a generalized version of frequencies"
+  [f coll]
+  (let [gp (group-by f coll)]
+    (zipmap (keys gp)  (map #(count (second %)) gp))))
+
+(defn verify-registered-fns
+  [coll]
+  (let [conflicts (->> (frequencies-by :name coll)
+                       (m/filter-vals #(> % 1))
+                       (keys)
+                       (set))]
+    (when-not (empty? conflicts)
+      (let [data (->> (map (fn [{:keys [name fqn]}] [name fqn]) coll)
+                      (group-by first)
+                      (m/filter-keys conflicts)
+                      (vals))]
+        (throw (ex-info "conflict detected: All temporal workflows and activities must be uniquely named" {:conflicts data}))))))
+
+(def get-annotated-fns
   (memoize
    (fn [marker]
-     (->> (all-ns)
-          (mapcat (comp vals ns-interns ns-name))
-          (reduce (fn [acc x]
-                    (let [v (var-get x)
-                          m (get-annotation v marker)]
-                      (cond-> acc
-                        (some? m) (assoc m v)))) {})))))
+     (let [data (find-annotated-fns marker)]
+       (verify-registered-fns data)
+       (m/index-by :name data)))))
 
 (defn find-annotated-fn
   "Finds any functions named 't' that carry metadata 'marker'"
   [marker t]
-  (get (find-annotated-fns marker) t))
+  (:fn (or (get (get-annotated-fns marker) t)
+           (throw (ex-info "workflow/activity not found" {:function t})))))
 
-(defn get-classname
+(defn get-fq-classname
   "Returns the fully qualified classname for 'sym'"
   [sym]
   (-> (ns-name *ns*)

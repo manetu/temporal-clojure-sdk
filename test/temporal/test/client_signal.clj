@@ -16,7 +16,7 @@
   (lazy-seq (when-let [m (<! signals signal-name)]
               (cons m (lazy-signals signals)))))
 
-(defworkflow test-workflow
+(defworkflow client-signal-workflow
   [ctx {:keys [signals] {:keys [nr] :as args} :args}]
   (log/info "test-workflow:" args)
   (doall (take nr (lazy-signals signals))))
@@ -25,7 +25,7 @@
 
 (deftest the-test
   (testing "Verifies that we can send signals from a client"
-    (let [workflow (t/create-workflow test-workflow)]
+    (let [workflow (t/create-workflow client-signal-workflow)]
       (c/start workflow {:nr expected})
       (dotimes [n expected]
         (>! workflow signal-name n))

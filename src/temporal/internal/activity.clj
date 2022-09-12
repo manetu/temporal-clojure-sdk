@@ -47,7 +47,7 @@
 
 (defn get-annotation
   ^String [x]
-  (u/get-annotation x ::def))
+  (u/get-annotated-name x ::def))
 
 (defn- export-result [activity-id x]
   (log/trace activity-id "result:" x)

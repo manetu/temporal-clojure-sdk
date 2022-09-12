@@ -96,7 +96,7 @@ Create a new workflow-stub instance, suitable for managing and interacting with 
 ```
 "
   [^WorkflowClient client workflow options]
-  (let [wf-name (w/get-annotation workflow)
+  (let [wf-name (w/get-annotated-name workflow)
         stub    (.newUntypedWorkflowStub client wf-name (w/wf-options-> options))]
     (log/trace "create-workflow:" wf-name options)
     {:client client :stub stub}))

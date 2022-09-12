@@ -12,7 +12,7 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity greet-activity
+(defactivity sequence-activity
   [ctx args]
   (log/info "greet-activity:" args)
   (str "Hi, " args))
@@ -21,9 +21,9 @@
   [ctx _]
   @(-> (pt/resolved true)
        (p/then (fn [_]
-                 (a/invoke greet-activity "Bob")))
+                 (a/invoke sequence-activity "Bob")))
        (p/then (fn [_]
-                 (a/invoke greet-activity "Charlie")))
+                 (a/invoke sequence-activity "Charlie")))
        (p/then (constantly :ok))))
 
 (deftest the-test

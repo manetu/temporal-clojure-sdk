@@ -11,7 +11,7 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity greet-activity
+(defactivity async-greet-activity
   [ctx {:keys [name] :as args}]
   (go
     (log/info "greet-activity:" args)
@@ -19,18 +19,18 @@
       (ex-info "permission-denied" {})                      ;; we don't like Charlie
       (str "Hi, " name))))
 
-(defworkflow greeter-workflow
+(defworkflow async-greeter-workflow
   [ctx {:keys [args]}]
   (log/info "greeter-workflow:" args)
-  @(a/invoke greet-activity args (assoc a/default-invoke-options :retry-options {:maximum-attempts 1})))
+  @(a/invoke async-greet-activity args (assoc a/default-invoke-options :retry-options {:maximum-attempts 1})))
 
 (deftest the-test
   (testing "Verifies that we can round-trip with an async task"
-    (let [workflow (t/create-workflow greeter-workflow)]
+    (let [workflow (t/create-workflow async-greeter-workflow)]
       (c/start workflow {:name "Bob"})
       (is (= @(c/get-result workflow) "Hi, Bob"))))
   (testing "Verifies that we can process errors in async mode"
-    (let [workflow (t/create-workflow greeter-workflow)]
+    (let [workflow (t/create-workflow async-greeter-workflow)]
       (c/start workflow {:name "Charlie"})
       (is (thrown? java.util.concurrent.ExecutionException
                    @(c/get-result workflow))))))

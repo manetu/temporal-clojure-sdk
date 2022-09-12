@@ -12,20 +12,20 @@
 
 (use-fixtures :once t/wrap-service)
 
-(defactivity echo-activity
+(defactivity scale-activity
   [ctx {:keys [id] :as args}]
   (log/info "activity:" args)
   (go
     (<! (async/timeout 1000))
     id))
 
-(defworkflow parallel-workflow
+(defworkflow scale-workflow
   [ctx {:keys [args]}]
   (log/info "workflow:" args)
-  @(a/invoke echo-activity args))
+  @(a/invoke scale-activity args))
 
 (defn create [id]
-  (let [workflow (t/create-workflow parallel-workflow)]
+  (let [workflow (t/create-workflow scale-workflow)]
     (c/start workflow {:id id})
     (c/get-result workflow)))
 

@@ -37,9 +37,9 @@
 (defn get-info []
   (d/datafy (Workflow/getInfo)))
 
-(defn get-annotation
+(defn get-annotated-name
   ^String [x]
-  (u/get-annotation x ::def))
+  (u/get-annotated-name x ::def))
 
 (defn execute
   [ctx args]
