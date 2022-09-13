@@ -2,4 +2,5 @@
  [["Readme" {:file "README.md"}]
   ["Workflows" {:file "doc/workflows.md"}]
   ["Activities" {:file "doc/activities.md"}]
-  ["Workers" {:file "doc/workers.md"}]]}
+  ["Workers" {:file "doc/workers.md"}]
+  ["Client" {:file "doc/client.md"}]]}
