@@ -2,13 +2,13 @@
 
 ## What is an Activity?
 
-Activities are implementations of certain tasks which need to be performed during a Workflow execution. They can be used to interact with external systems, such as databases, services, etc.
+Activities are implementations of specific tasks performed during a Workflow execution.  These tasks typically interact with external systems, such as databases, services, etc.  They are free to block using conventional synchronization primitives or to run complex operations.  An Activity forms the basis of a checkpoint, because the values entering and leaving an Activity become part of the Event History.
 
 Workflows orchestrate invocations of Activities.
 
 ## Implementing Activities
 
-An Activity implementation consists of defining a (defactivity) function. This function is invoked by the platform each time an Activity execution is started or retried. As soon as this method returns, the Activity execution is considered as completed and the result is available to the caller.
+An Activity implementation consists of defining a (defactivity) function.  The platform invokes this function each time an Activity execution is started by a Workflow or retried by the platform.  Returning from the method signals that the Activity is considered complete.  The result is then made available to the calling Workflow.
 
 ### Example
 
@@ -22,13 +22,13 @@ An Activity implementation consists of defining a (defactivity) function. This f
 
 ## Registering Activities
 
-By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually declare specific Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
+By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually specify Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
-*It should be noted that the name of the Activity, the arguments that the Activity accepts, and the data that the Activity returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, the Activity definition must be treated with care whenever code is refactored.*
+*It should be noted that the name of the Activity, the arguments that the Activity accepts, and the data that the Activity returns are all part of a contract you need to maintain across potentially long-lived instances.  Therefore, the Activity definition must be treated with care whenever refactoring code.*
 
 ## Starting Activity Executions
 
-In this Clojure SDK, Activities are always started with either [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#local-invoke), both of which are called similarly.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
+In this Clojure SDK, Workflows start Activities with either [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#local-invoke), both of which share similar calling conventions.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
 
 ### Example
 
@@ -44,7 +44,7 @@ In this Clojure SDK, Activities are always started with either [invoke](https://
 
 ## Asynchronous Mode
 
-Returning a core.async channel places the activity into [Asynchronous mode](https://docs.temporal.io/java/activities/#asynchronous-activity-completion), where the result may be resolved at a future time by sending a single message on the channel. Sending a [Throwable](https://docs.oracle.com/javase/7/docs/api/java/lang/Throwable.html) will signal a failure of the activity. Any other value will be serialized and returned to the caller.
+Returning a core.async channel places the Activity into [Asynchronous mode](https://docs.temporal.io/java/activities/#asynchronous-activity-completion).  The Activity is then free to send a single message on the channel at a future time to signal completion.  The value sent is returned to the calling Workflow.  Sending a [Throwable](https://docs.oracle.com/javase/7/docs/api/java/lang/Throwable.html) will signal a failure of the Activity.
 
 ### Example
 
