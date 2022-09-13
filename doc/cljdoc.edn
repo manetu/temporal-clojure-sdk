@@ -1,4 +1,5 @@
 {:cljdoc.doc/tree
  [["Readme" {:file "README.md"}]
   ["Workflows" {:file "doc/workflows.md"}]
-  ["Activities" {:file "doc/activities.md"}]]}
+  ["Activities" {:file "doc/activities.md"}]
+  ["Workers" {:file "doc/workers.md"}]]}
