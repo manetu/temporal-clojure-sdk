@@ -2,9 +2,9 @@
 
 ## What is a Workflow?
 
-Workflows are resilient programs, meaning that they will continue execution even in the presence of different failure conditions.
+Workflows are resilient programs that will continue execution even under different failure conditions.
 
-Workflows encapsulate execution/orchestration of Tasks which include Activities and child Workflows. They also need to react to external events, deal with Timeouts, etc.
+Workflows encapsulate the execution/orchestration of Tasks, including Activities and child Workflows.  They must also react to external events, deal with Timeouts, etc.
 
 In this Clojure SDK programming model, a Temporal Workflow is a function declared with ([defworkflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#defworkflow))
 
@@ -16,7 +16,7 @@ In this Clojure SDK programming model, a Temporal Workflow is a function declare
 
 ## Implementing Workflows
 
-A Workflow implementation consists of defining a (defworkflow) function. This function is invoked by the platform each time a new Workflow execution is started or retried. As soon as this method returns, the Workflow execution is considered as completed and the result is available to the caller via ([get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result)).
+A Workflow implementation consists of defining a (defworkflow) function.  The platform invokes this function each time a new Workflow execution is started or retried.  Returning from the method signals that the Workflow execution is considered complete.  The result is available to the caller via ([get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result)).
 
 ### Example
 
@@ -30,36 +30,36 @@ A Workflow implementation consists of defining a (defworkflow) function. This fu
 
 ### Workflow Implementation Constraints
 
-Temporal uses the [Event Sourcing pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) to recover the state of a Workflow object including its threads and local variable values. In essence, every time a Workflow state has to be restored, its code is re-executed from the beginning. Note that during replay, successfully executed Activities are not re-executed as their results are already recorded in the Workflow event history.
+Temporal uses the [Event Sourcing pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) to recover the state of a Workflow object, including its threads and local variable values.  In essence, the Workflow code is re-executed from the beginning whenever a Workflow state requires restoration.  During replay, successfully executed Activities are not re-executed but return the result previously recorded in the Workflow event history.
 
-Even though Temporal has the replay capability, which brings resilience to your Workflows, you should never think about this capability when writing your Workflows. Instead, you should focus on implementing your business logic/requirements and write your Workflows as they would execute only once.
+Even though Temporal has the replay capability, which brings resilience to your Workflows, you should never think about this capability when writing your Workflows.  Instead, you should focus on implementing your business logic/requirements and write your Workflows as they would execute only once.
 
-There are some things however to think about when writing your Workflows, namely determinism and isolation. We summarize these constraints here:
+There are some things, however, to think about when writing your Workflows, namely determinism and isolation.  We summarize these constraints here:
 
-- Do not use any mutable global variables such as atoms in your Workflow implementations. This will assure that multiple Workflow instances are fully isolated.
+- Do not use any mutable global variables such as atoms in your Workflow implementations.  This will ensure that multiple Workflow instances are fully isolated.
 - Do not call any non-deterministic functions like non-seeded random or uuid-generators directly from the Workflow code. (Coming soon: SideEffect API)
-- Perform all IO operations and calls to third-party services on Activities and not Workflows, as they are usually non-deterministic in nature.
-- Do not use any programming language constructs that rely on system time. (Coming soon: API methods for time)
-- Do not use threading primitives such as clojure.core.async/go or clojure.core.async/thread. (Coming soon: API methods for async function execution)
+- Perform all IO operations and calls to third-party services on Activities and not Workflows, as they are usually non-deterministic.
+- Do not use any programming language constructs that rely on system time.  (Coming soon: API methods for time)
+- Do not use threading primitives such as clojure.core.async/go or clojure.core.async/thread.  (Coming soon: API methods for async function execution)
 - Do not perform any operations that may block the underlying thread, such as clojure.core.async/<!!.
-  - There is no general need in explicit synchronization because multi-threaded code inside a Workflow is executed one thread at a time and under a global lock.
-  - This Clojure SDK provides integration with [promesa](https://github.com/funcool/promesa) with a few limitations (See [Promises](#promises)), for asynchronous integration with safe blocking operations, such as waiting on an Activity.
-- (Coming soon) Use versioning-support when making any changes to the Workflow code. Without this, any deployment of updated Workflow code might break already running Workflows.
-- Don’t access configuration APIs directly from a Workflow because changes in the configuration might affect a Workflow execution path. Pass it as an argument to a Workflow function or use an Activity to load it.
+  - There is no general need for explicit synchronization because multi-threaded code inside a Workflow is executed one thread at a time and under a global lock.
+  - This Clojure SDK provides integration with [promesa](https://github.com/funcool/promesa) with a few limitations (See [Promises](#promises)) for asynchronous integration with safe blocking operations, such as waiting on an Activity.
+- (Coming soon) Use versioning-support when making changes to the Workflow code.  Without this, any deployment of updated Workflow code might break already running Workflows.
+- Don’t access configuration APIs directly from a Workflow because changes in the configuration might affect a Workflow execution path.  Pass it as an argument to a Workflow function or use an Activity to load it.
 
 ## Registering Workflows
 
-By default, Workflows are automatically registered simply by declaring a (defworkflow).  You may optionally manually declare specific Workflows to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
+By default, Workflows are automatically registered simply by declaring a (defworkflow).  You may optionally manually specify Workflows to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
-*It should be noted that the name of the workflow, the arguments and signals that the workflow accepts, and the data that the workflow returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, the Workflow definition must be treated with care whenever code is refactored.*
+*It should be noted that the name of the Workflow, the arguments and signals that the Workflow accepts, and the data that the workflow returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, refactoring code involving Workflow logic should be treated with care to avoid inadvertently breaking your contract.*
 
 ## Starting Workflow Executions
 
-In this Clojure SDK, Workflows are always started with the following flow:
+In this Clojure SDK, developers manage Workflows with the following flow:
 
 1. Invoke [create-workflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#create-workflow)
-2. Invoke [start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start) or [signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start).  The `params` passed to these functions will be forwarded to the workflow and available as `args` in the request map of the Workflow.
-3. Gather the asynchronous results with [get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result) which returns a promise and needs to be dereferenced.
+2.  Invoke [start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start) or [signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start).  The `params` passed to these functions will be forwarded to the Workflow and available as `args` in the request map of the Workflow.
+3.  Gather the asynchronous results with [get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result), which returns a promise and requires dereferencing before the result value is realized.
 
 ### Example
 
@@ -75,13 +75,13 @@ In this Clojure SDK, Workflows are always started with the following flow:
 
 ## Safe blocking within Workflows
 
-The Temporal Workflow instance behaves like a [Lightweight Process](https://en.wikipedia.org/wiki/Light-weight_process) or [Fiber](https://en.wikipedia.org/wiki/Fiber_(computer_science)).  This means the system can generally support a high ratio of Workflow instances to CPUs often in the range of 1000:1 or greater.  Achieving this feat requires controlling the IO in and out of the instance in a way that maximizes resource sharing.  Therefore, any LWP/Fiber implementation will generally provide its own IO constructions (e.g. mailboxes, channels, promises, etc.), and Temporal is no exception.
+A Temporal Workflow instance behaves like a [Lightweight Process](https://en.wikipedia.org/wiki/Light-weight_process) or [Fiber](https://en.wikipedia.org/wiki/Fiber_(computer_science)).  These types of designs support a high ratio of Workflow instances to CPUs, often in the range of 1000:1 or greater.  Achieving this feat requires controlling the IO in and out of the instance to maximize resource sharing.  Therefore, any LWP/Fiber implementation will generally provide its own IO constructs (e.g., mailboxes, channels, promises, etc.), and Temporal is no exception.
 
 In this Clojure SDK, this support comes in a few different flavors:
 
 ### Promises
 
-Certain methods naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  These Workflow-safe Promises have been integrated with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
+Specific methods naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  The Clojure SDK integrates these Workflow-safe Promises with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
 
 #### Safe to use
 
@@ -111,7 +111,7 @@ Placing (p/resolved) (or anything else that ultimately creates a promesa promise
 
 ##### Good example
 
-The proper method is to ensure that a Temporal native operation starts the chain
+The proper method is to ensure that a Temporal native operation starts the chain.
 
 ```clojure
 ...
@@ -123,7 +123,7 @@ The proper method is to ensure that a Temporal native operation starts the chain
 
 ##### Watch out for implicit conversion
 
-The following situation can lead to a failure
+The following situation can lead to a failure:
 
 ```clojure
 (-> (when some-condition
@@ -131,7 +131,7 @@ The following situation can lead to a failure
     (p/then (fn [x] ...)))
 ```
 
-for situations where some-condition is `false` because promesa will cast the scalar `nil` to (p/resolved nil), thus violating the origination rule. Instead, do this:
+For situations where `some-condition` is `false` because promesa will cast the scalar `nil` to (p/resolved nil), thus violating the origination rule.  Instead, do this:
 
 ```clojure
 ...
@@ -143,11 +143,11 @@ for situations where some-condition is `false` because promesa will cast the sca
     (p/then (fn [x] ...)))
 ```
 
-Thus ensuring that the origination rules are met regardless of the outcome of the conditional.
+Doing so ensures that the origination rules are met regardless of the outcome of the conditional.
 
 ### Await
 
-You may use [await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The predicate is evaluated at each major state transition of the Workflow.
+You may use [await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
 
 ### Temporal Signals
 
@@ -155,7 +155,7 @@ Your Workflow may send or receive [signals](https://cljdoc.org/d/io.github.manet
 
 #### Receiving Signals
 
-Your Workflow may either block waiting with signals with [<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  In either case, your Workflow needs to obtain the `signals` context provided in the Worklow request map.
+Your Workflow may either block waiting with signals with [<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  Either way, your Workflow needs to obtain the `signals` context provided in the Workflow request map.
 
 ##### Example
 
