@@ -22,13 +22,13 @@ An Activity implementation consists of defining a (defactivity) function. This f
 
 ## Registering Activities
 
-By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually declare specific Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/0.7.0/api/temporal.client.worker#worker-options)).
+By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually declare specific Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
 *It should be noted that the name of the Activity is part of a contract, along with the arguments that the Activity accepts.  Therefore, the Activity definition must be treated with care whenever code is refactored.*
 
 ## Starting Activity Executions
 
-In this Clojure SDK, Activities are always started with either [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/0.7.0/api/temporal.activity#invoke) or [local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/0.7.0/api/temporal.activity#local-invoke), both of which are called similarly.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
+In this Clojure SDK, Activities are always started with either [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#local-invoke), both of which are called similarly.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
 
 ### Example
 
