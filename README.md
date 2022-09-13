@@ -7,13 +7,19 @@ resilient applications using developer-friendly primitives, instead of constantl
 
 This Clojure SDK is a framework for authoring Workflows and Activities in Clojure. (For other languages, see [Temporal SDKs](https://docs.temporal.io/application-development).)
 
+### Clojure SDK
+
+- [Clojure SDK and API documentation](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
+
+### Temporal in general
+
 - [Temporal docs](https://docs.temporal.io/)
 - [Install Temporal Server](https://docs.temporal.io/docs/server/quick-install)
 - [Temporal CLI](https://docs.temporal.io/docs/devtools/tctl/)
 
 ## Requirements
 
-- JDK 1.8+
+- JDK 11+
 
 ## macOS Users
 
@@ -27,10 +33,6 @@ To solve the problem add the following entries to your `/etc/hosts` file (where 
 127.0.0.1   my-macbook
 ::1         my-macbook
 ```
-
-## Using
-
-You can peruse the [API Doc](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
 
 ## Contributing
 
