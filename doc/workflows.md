@@ -51,7 +51,7 @@ There are some things however to think about when writing your Workflows, namely
 
 By default, Workflows are automatically registered simply by declaring a (defworkflow).  You may optionally manually declare specific Workflows to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
-*It should be noted that the name of the workflow is part of a contract, along with the arguments that the workflow accepts.  Therefore, the Workflow definition must be treated with care whenever code is refactored.*
+*It should be noted that the name of the workflow, the arguments and signals that the workflow accepts, and the data that the workflow returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, the Workflow definition must be treated with care whenever code is refactored.*
 
 ## Starting Workflow Executions
 
@@ -147,7 +147,7 @@ Thus ensuring that the origination rules are met regardless of the outcome of th
 
 ### Await
 
-You may use [await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently parks the Workflow until a provided predicate evaluates to true.  The predicate is evaluated at each major state transition of the Workflow.
+You may use [await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The predicate is evaluated at each major state transition of the Workflow.
 
 ### Temporal Signals
 

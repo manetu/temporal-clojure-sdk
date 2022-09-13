@@ -24,7 +24,7 @@ An Activity implementation consists of defining a (defactivity) function. This f
 
 By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually declare specific Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
-*It should be noted that the name of the Activity is part of a contract, along with the arguments that the Activity accepts.  Therefore, the Activity definition must be treated with care whenever code is refactored.*
+*It should be noted that the name of the Activity, the arguments that the Activity accepts, and the data that the Activity returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, the Activity definition must be treated with care whenever code is refactored.*
 
 ## Starting Activity Executions
 
