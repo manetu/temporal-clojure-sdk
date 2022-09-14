@@ -3,5 +3,5 @@
   ["Workflows" {:file "doc/workflows.md"}]
   ["Activities" {:file "doc/activities.md"}]
   ["Workers" {:file "doc/workers.md"}]
-  ["Client" {:file "doc/client.md"}]
+  ["Clients" {:file "doc/clients.md"}]
   ["Testing" {:file "doc/testing.md"}]]}
