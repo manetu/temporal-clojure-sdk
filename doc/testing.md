@@ -31,7 +31,7 @@ You can use the provided environment with a Clojure unit testing framework of yo
 
 (deftest my-test
   (testing "Verifies that we can invoke our greeter workflow"
-    (let [{:keys [client] :as env} (e/create {:queue-name task-queue})
+    (let [{:keys [client] :as env} (e/create {:task-queue task-queue})
           (c/create-workflow client greeter-workflow {:task-queue task-queue})]
       (c/start workflow {:name "Bob"})
       (is (= @(c/get-result workflow) "Hi, Bob")))))

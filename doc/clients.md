@@ -46,7 +46,7 @@ We can create a client to invoke our Workflow as follows:
 (def task-queue "MyTaskQueue")
 
 (let [client (c/create-client)
-      workflow (c/create-workflow client greeter-workflow {:queue-name task-queue})]
+      workflow (c/create-workflow client greeter-workflow {:task-queue task-queue})]
   (c/start workflow {:name "Bob"})
   (println @(c/get-result workflow)))
 ```

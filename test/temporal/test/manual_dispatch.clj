@@ -49,7 +49,7 @@
 ;; Fixtures
 ;;-----------------------------------------------------------------------------
 (defn create-service []
-  (let [{:keys [client] :as env} (e/create {:queue-name task-queue
+  (let [{:keys [client] :as env} (e/create {:task-queue task-queue
                                             :dispatch {:workflows [explicitly-registered-workflow]}})] ;; note that we intentionally omit explicitly-skipped-workflow
     (swap! state assoc
            :env env

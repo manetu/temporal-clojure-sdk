@@ -16,14 +16,14 @@ Arguments:
 - `options`:  See [[worker/worker-options]]
 
 ```clojure
-(let [{:keys [client] :as instance} (create {:queue-name ::my-queue :ctx {:some \"context\"}}]
+(let [{:keys [client] :as instance} (create {:task-queue ::my-queue :ctx {:some \"context\"}}]
   ;; create and invoke workflows
   (stop instance))
 ```
 "
-  [{:keys [queue-name] :as options}]
+  [{:keys [task-queue] :as options}]
   (let [env (TestWorkflowEnvironment/newInstance)
-        worker (.newWorker env (u/namify queue-name))]
+        worker (.newWorker env (u/namify task-queue))]
     (worker/init worker options)
     (.start env)
     {:env env :worker worker :client (.getWorkflowClient env)}))

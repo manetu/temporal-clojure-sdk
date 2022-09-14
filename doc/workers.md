@@ -39,13 +39,13 @@ We can register our Worker as follows:
 (def task-queue "MyTaskQueue")
 
 (let [client (c/create-client)]
-  (worker/start client {:queue-name task-queue}))
+  (worker/start client {:task-queue task-queue}))
 ```
 
 All visible defworkflow/defactivity functions are registered automatically, by default.  If you want greater control, such as to split specific Workflows across TaskQueues, you may use the `:dispatch` option.
 
 ```clojure
-(worker/start client {:queue-name task-queue
+(worker/start client {:task-queue task-queue
                       :dispatch {:activities [greet-activity] :workflows [greet-workflow]}})
 ```
 

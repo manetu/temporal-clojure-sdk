@@ -33,7 +33,7 @@ Options for configuring workers (See [[start]])
 
 | Value        | Mandatory   | Description                                                       | Type             | Default |
 | ------------ | ----------- | ----------------------------------------------------------------- | ---------------- | ------- |
-| :queue-name  | y           | The name of the task-queue for this worker instance to listen on. | String / keyword |         |
+| :task-queue  | y           | The name of the task-queue for this worker instance to listen on. | String / keyword |         |
 | :ctx         |             | An opaque handle that is passed back as the first argument of [[temporal.workflow/defworkflow]] and [[temporal.activity/defactivity]], useful for passing state such as database or network connections.  | <any> | nil |
 | :dispatch    |             | An optional map explicitly setting the dispatch table             | See below        | All visible activities/workers are automatically registered |
 
@@ -65,12 +65,12 @@ Arguments:
 - `options`:    Worker start options (See [[worker-options]])
 
 ```clojure
-(start {:queue-name ::my-queue :ctx {:some \"context\"}})
+(start {:task-queue ::my-queue :ctx {:some \"context\"}})
 ```
 "
-  [client {:keys [queue-name] :as options}]
+  [client {:keys [task-queue] :as options}]
   (let [factory (WorkerFactory/newInstance client)
-        worker  (.newWorker factory (u/namify queue-name))]
+        worker  (.newWorker factory (u/namify task-queue))]
     (init worker options)
     (.start factory)
     {:factory factory :worker worker}))
@@ -84,7 +84,7 @@ Arguments:
 - `instance`: Result returned from original call to ([[start]])
 
 ```clojure
-(let [instance (start {:queue-name ::my-queue})]
+(let [instance (start {:task-queue ::my-queue})]
    ...
    (stop instance))
 ```
