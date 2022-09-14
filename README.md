@@ -21,19 +21,6 @@ This Clojure SDK is a framework for authoring Workflows and Activities in Clojur
 
 - JDK 11+
 
-## macOS Users
-
-Due to issues with default hostname resolution
-(see [this StackOverflow question](https://stackoverflow.com/questions/33289695/inetaddress-getlocalhost-slow-to-run-30-seconds) for more details),
-macOS Users may see gRPC `DEADLINE_EXCEEDED` errors and other slowdowns when running the SDK.
-
-To solve the problem add the following entries to your `/etc/hosts` file (where my-macbook is your hostname):
-
-```conf
-127.0.0.1   my-macbook
-::1         my-macbook
-```
-
 ## Contributing
 
 Pull requests welcome.  Please be sure to include a [DCO](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin) in any commit messages.
