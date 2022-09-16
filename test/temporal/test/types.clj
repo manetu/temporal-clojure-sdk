@@ -3,7 +3,8 @@
 (ns temporal.test.types
   (:require [clojure.test :refer :all]
             [temporal.client.core :as client]
-            [temporal.internal.workflow :as workflow])
+            [temporal.internal.workflow :as workflow]
+            [temporal.client.worker :as worker])
   (:import [java.time Duration]
            [io.grpc Grpc InsecureChannelCredentials Metadata]
            [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
@@ -50,3 +51,18 @@
     (let [options {:target "foo:1234" :namespace "default"}]
       (is (some? (client/stub-options-> options)))
       (is (some? (client/client-options-> options))))))
+
+(deftest worker-options
+  (testing "Verify that our worker-options work"
+    (let [x (worker/worker-options-> {:max-concurrent-activity-task-pollers            2
+                                      :max-concurrent-activity-execution-size          10
+                                      :max-concurrent-local-activity-execution-size    2
+                                      :max-concurrent-workflow-task-pollers            2
+                                      :max-concurrent-workflow-task-execution-size     10
+                                      :default-deadlock-detection-timeout              1000
+                                      :default-heartbeat-throttle-interval             (Duration/ofSeconds 10)
+                                      :max-heartbeat-throttle-interval                 (Duration/ofSeconds 10)
+                                      :local-activity-worker-only                      false
+                                      :max-taskqueue-activities-per-second             1.0
+                                      :max-workers-activities-per-second               1.0})]
+      (is (-> x (.isLocalActivityWorkerOnly) false?)))))
