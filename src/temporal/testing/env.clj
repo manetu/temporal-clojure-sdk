@@ -13,7 +13,7 @@ backend, suitable for unit testing.
 
 Arguments:
 
-- `options`:  See [[worker/worker-options]]
+  - `options`:  See [[temporal.client.worker/worker-options]]
 
 ```clojure
 (let [{:keys [client] :as instance} (create {:task-queue ::my-queue :ctx {:some \"context\"}}]
