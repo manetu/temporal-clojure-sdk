@@ -9,7 +9,10 @@ This Clojure SDK is a framework for authoring Workflows and Activities in Clojur
 
 ### Status
 
-**Alpha**: Functional, but undergoing active development.  Some major features (Queries, Child-Workflows, SideEffects, etc) are missing/imcomplete.  API may evolve in breaking ways, though we will always bump at least the minor version when this happens and include a note.
+**Alpha**
+
+This SDK is functional, but undergoing active development.  Some major features (Queries, Child-Workflows, SideEffects, etc) are missing/incomplete.  API may evolve in breaking ways, though we will always bump at least the minor version when this happens and include a note.
+
 ### Clojure SDK
 
 - [Clojure SDK and API documentation](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
