@@ -6,7 +6,7 @@ Workflows are resilient programs that will continue execution even under differe
 
 Workflows encapsulate the execution/orchestration of Tasks, including Activities and child Workflows.  They must also react to external events, deal with Timeouts, etc.
 
-In this Clojure SDK programming model, a Temporal Workflow is a function declared with ([defworkflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#defworkflow))
+In this Clojure SDK programming model, a Temporal Workflow is a function declared with [defworkflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#defworkflow)
 
 ```clojure
 (defworkflow my-workflow
@@ -16,7 +16,7 @@ In this Clojure SDK programming model, a Temporal Workflow is a function declare
 
 ## Implementing Workflows
 
-A Workflow implementation consists of defining a (defworkflow) function.  The platform invokes this function each time a new Workflow execution is started or retried.  Returning from the method signals that the Workflow execution is considered complete.  The result is available to the caller via ([get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result)).
+A Workflow implementation consists of defining a (defworkflow) function.  The platform invokes this function each time a new Workflow execution is started or retried.  Returning from the method signals that the Workflow execution is considered complete.  The result is available to the caller via [temporal.client.core/get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result).
 
 ### Example
 
@@ -49,7 +49,7 @@ There are some things, however, to think about when writing your Workflows, name
 
 ## Registering Workflows
 
-By default, Workflows are automatically registered simply by declaring a (defworkflow).  You may optionally manually specify Workflows to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
+By default, Workflows are automatically registered simply by declaring a (defworkflow).  You may optionally manually specify Workflows to register when creating Workers (see [temporal.client.worker/worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
 *It should be noted that the name of the Workflow, the arguments and signals that the Workflow accepts, and the data that the workflow returns are all part of a contract that you need to maintain across potentially long-lived instances.  Therefore, refactoring code involving Workflow logic should be treated with care to avoid inadvertently breaking your contract.*
 
@@ -57,9 +57,9 @@ By default, Workflows are automatically registered simply by declaring a (defwor
 
 In this Clojure SDK, developers manage Workflows with the following flow:
 
-1. Invoke [create-workflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#create-workflow)
-2.  Invoke [start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start) or [signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start).  The `params` passed to these functions will be forwarded to the Workflow and available as `args` in the request map of the Workflow.
-3.  Gather the asynchronous results with [get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result), which returns a promise and requires dereferencing before the result value is realized.
+1. Invoke [temporal.client.core/create-workflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#create-workflow)
+2.  Invoke [temporal.client.core/start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start) or [temporal.client.core/signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start).  The `params` passed to these functions will be forwarded to the Workflow and available as `args` in the request map of the Workflow.
+3.  Gather the asynchronous results with [temporal.client.core/get-result](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-result), which returns a promise and requires dereferencing before the result value is realized.
 
 ### Example
 
@@ -92,7 +92,7 @@ Specific methods naturally return Workflow-safe Promises, such as invoking an Ac
 - "Originating" primitives, such as [create](https://funcool.github.io/promesa/latest/promesa.core.html#var-create), [resolved](https://funcool.github.io/promesa/latest/promesa.core.html#var-resolved), and [let](https://funcool.github.io/promesa/latest/promesa.core.html#var-let)
 - Aggregating primitives, such as [all](https://funcool.github.io/promesa/latest/promesa.core.html#var-all) and [race](https://funcool.github.io/promesa/latest/promesa.core.html#var-race)
 
-Instead, you must ensure that all promises originate with an SDK provided function, such as [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [rejected](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#rejected).  For aggregating operations, see Temporal Safe options for [all](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#all) and [race](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#race).
+Instead, you must ensure that all promises originate with an SDK provided function, such as [temporal.activity/invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [temporal.promise/rejected](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#rejected).  For aggregating operations, see Temporal Safe options for [temporal.promise/all](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#all) and [temporal.promise/race](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.promise#race).
 
 What this means in practice is that any promise chain should generally start with some Temporal-native promise.
 
@@ -147,7 +147,7 @@ Doing so ensures that the origination rules are met regardless of the outcome of
 
 ### Await
 
-You may use [await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
+You may use [temporal.core/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
 
 ### Temporal Signals
 
@@ -155,7 +155,7 @@ Your Workflow may send or receive [signals](https://cljdoc.org/d/io.github.manet
 
 #### Receiving Signals
 
-Your Workflow may either block waiting with signals with [<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  Either way, your Workflow needs to obtain the `signals` context provided in the Workflow request map.
+Your Workflow may either block waiting with signals with [temporal.signals/<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [temporal.signals/poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  Either way, your Workflow needs to obtain the `signals` context provided in the Workflow request map.
 
 ##### Example
 

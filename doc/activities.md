@@ -22,13 +22,13 @@ An Activity implementation consists of defining a (defactivity) function.  The p
 
 ## Registering Activities
 
-By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually specify Activities to register when creating Workers (see [worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
+By default, Activities are automatically registered simply by declaring a (defactivity).  You may optionally manually specify Activities to register when creating Workers (see [temporal.client.worker/worker-options](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.worker#worker-options)).
 
 *It should be noted that the name of the Activity, the arguments that the Activity accepts, and the data that the Activity returns are all part of a contract you need to maintain across potentially long-lived instances.  Therefore, the Activity definition must be treated with care whenever refactoring code.*
 
 ## Starting Activity Executions
 
-In this Clojure SDK, Workflows start Activities with either [invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#local-invoke), both of which share similar calling conventions.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
+In this Clojure SDK, Workflows start Activities with either [temporal.activity/invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#invoke) or [temporal.activity/local-invoke](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#local-invoke), both of which share similar calling conventions.  The primary difference between them is the execution model under the covers (See [What is a Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/))
 
 ### Example
 
