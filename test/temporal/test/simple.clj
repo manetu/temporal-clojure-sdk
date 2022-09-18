@@ -18,7 +18,7 @@
 (defworkflow simple-greeter-workflow
   [ctx {:keys [args]}]
   (log/info "greeter-workflow:" args)
-  @(a/invoke simple-greet-activity args (assoc a/default-invoke-options :retry-options {:maximum-attempts 1})))
+  @(a/invoke simple-greet-activity args))
 
 (deftest the-test
   (testing "Verifies that we can round-trip through start"

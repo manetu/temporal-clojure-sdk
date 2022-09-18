@@ -18,7 +18,7 @@
 (defworkflow local-greeter-workflow
   [ctx {:keys [args]}]
   (log/info "greeter-workflow:" args)
-  @(a/local-invoke local-greet-activity args (assoc a/default-invoke-options :do-not-include-args true)))
+  @(a/local-invoke local-greet-activity args {:do-not-include-args true}))
 
 (deftest the-test
   (testing "Verifies that we can round-trip through start"

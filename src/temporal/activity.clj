@@ -8,10 +8,7 @@
             [temporal.internal.activity :as a]
             [temporal.internal.utils :as u]
             [temporal.internal.promise])                    ;; needed for IPromise protocol extention
-  (:import [io.temporal.workflow Workflow]
-           [java.time Duration]))
-
-(def ^:no-doc default-invoke-options {:start-to-close-timeout (Duration/ofSeconds 3)})
+  (:import [io.temporal.workflow Workflow]))
 
 (defn- complete-invoke
   [activity result]
@@ -25,6 +22,31 @@
 Invokes 'activity' with 'params' from within a workflow context.  Returns a promise that when derefed will resolve to
 the evaluation of the defactivity once the activity concludes.
 
+Arguments:
+
+- `activity`: A reference to a symbol registered with [[defactivity]].
+- `params`: Opaque serializable data that will be passed as arguments to the invoked activity
+- `options`: See below.
+
+#### options map
+
+| Value                      | Description                                                                                | Type         | Default |
+| -------------------------  | ------------------------------------------------------------------------------------------ | ------------ | ------- |
+| :cancellation-type         | Defines the activity's stub cancellation mode.                                             | See `cancellation types` below | :try-cancel |
+| :heartbeat-timeout         | Heartbeat interval.                                                                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options             | Define how activity is retried in case of failure.                                         | [[temporal.common/retry-options]] | |
+| :start-to-close-timeout    | Maximum time of a single Activity execution attempt.                                       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :schedule-to-close-timeout | Total time that a workflow is willing to wait for Activity to complete.                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :schedule-to-start-timeout | Time that the Activity Task can stay in the Task Queue before it is picked up by a Worker. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+
+#### cancellation types
+
+| Value                        | Description                                                                 |
+| -------------------------    | --------------------------------------------------------------------------- |
+| :try-cancel                  | In case of activity's scope cancellation send an Activity cancellation request to the server, and report cancellation to the Workflow Execution by causing the activity stub call to fail with [CancelledFailure](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/failure/CanceledFailure.html) |
+| :abandon                     | Do not request cancellation of the Activity Execution at all (no request is sent to the server) and immediately report cancellation to the Workflow Execution by causing the activity stub call to fail with [CancelledFailure](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/failure/CanceledFailure.html) immediately. |
+| :wait-cancellation-completed | Wait for the Activity Execution to confirm any requested cancellation.      |
+
 ```clojure
 (defactivity my-activity
    [ctx {:keys [foo] :as args}]
@@ -33,7 +55,7 @@ the evaluation of the defactivity once the activity concludes.
 (invoke my-activity {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
 ```
 "
-  ([activity params] (invoke activity params default-invoke-options))
+  ([activity params] (invoke activity params {}))
   ([activity params options]
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
@@ -49,6 +71,22 @@ the evaluation of the defactivity once the activity concludes.
 Invokes 'activity' with 'params' from within a workflow context as a [Local Activity](https://docs.temporal.io/concepts/what-is-a-local-activity/).  Returns a promise that when
 derefed will resolve to the evaluation of the defactivity once the activity concludes.
 
+Arguments:
+
+- `activity`: A reference to a symbol registered with [[defactivity]].
+- `params`: Opaque serializable data that will be passed as arguments to the invoked activity
+- `options`: See below.
+
+#### options map
+
+| Value                      | Description                                                                                | Type         | Default |
+| -------------------------  | ------------------------------------------------------------------------------------------ | ------------ | ------- |
+| :start-to-close-timeout    | Maximum time of a single Activity execution attempt.                                       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :schedule-to-close-timeout | Total time that a workflow is willing to wait for Activity to complete.                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options             | Define how activity is retried in case of failure.                                         | [[temporal.common/retry-options]] | |
+| :do-not-include-args       | When set to true, the serialized arguments of the local Activity are not included in the Marker Event that stores the local Activity's invocation result. | boolean | false |
+| :local-retry-threshold     | Maximum time to retry locally, while keeping the Workflow Task open via a Heartbeat.       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+
 ```clojure
 (defactivity my-activity
    [ctx {:keys [foo] :as args}]
@@ -57,7 +95,7 @@ derefed will resolve to the evaluation of the defactivity once the activity conc
 (local-invoke my-activity {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
 ```
 "
-  ([activity params] (invoke activity params default-invoke-options))
+  ([activity params] (invoke activity params {}))
   ([activity params options]
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedLocalActivityStub (a/local-invoke-options-> options))]
