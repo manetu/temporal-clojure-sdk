@@ -16,6 +16,7 @@ This SDK is functional, but undergoing active development.  Some major features 
 ### Clojure SDK
 
 - [Clojure SDK and API documentation](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
+- [Clojure Samples](./samples/README.md)
 
 ### Temporal in general
 
