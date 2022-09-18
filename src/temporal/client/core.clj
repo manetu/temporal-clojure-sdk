@@ -37,7 +37,7 @@
 
 (defn ^:no-doc client-options->
   ^WorkflowClientOptions [params]
-  (u/build (WorkflowClientOptions/newBuilder) client-options params))
+  (u/build (WorkflowClientOptions/newBuilder (WorkflowClientOptions/getDefaultInstance)) client-options params))
 
 (defn create-client
   "

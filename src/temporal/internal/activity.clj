@@ -7,18 +7,35 @@
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [temporal.internal.utils :as u]
-            [temporal.internal.common :as common])
-  (:import [io.temporal.activity Activity ActivityInfo DynamicActivity]
+            [temporal.common :as common])
+  (:import [java.time Duration]
+           [io.temporal.activity Activity ActivityInfo DynamicActivity ActivityCancellationType]
            [io.temporal.activity ActivityOptions ActivityOptions$Builder LocalActivityOptions LocalActivityOptions$Builder]
            [clojure.core.async.impl.channels ManyToManyChannel]))
 
+(def cancellation-type->
+  {:abandon                     ActivityCancellationType/ABANDON
+   :try-cancel                  ActivityCancellationType/TRY_CANCEL
+   :wait-cancellation-completed ActivityCancellationType/WAIT_CANCELLATION_COMPLETED})
+
 (def invoke-option-spec
-  {:start-to-close-timeout #(.setStartToCloseTimeout ^ActivityOptions$Builder %1  %2)
-   :retry-options          #(.setRetryOptions ^ActivityOptions$Builder %1 (common/retry-options-> %2))})
+  {:cancellation-type         #(.setCancellationType ^ActivityOptions$Builder %1 (cancellation-type-> %2))
+   :heartbeat-timeout         #(.setHeartbeatTimeout ^ActivityOptions$Builder %1 %2)
+   :retry-options             #(.setRetryOptions ^ActivityOptions$Builder %1 (common/retry-options-> %2))
+   :start-to-close-timeout    #(.setStartToCloseTimeout ^ActivityOptions$Builder %1 %2)
+   :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^ActivityOptions$Builder %1 %2)
+   :schedule-to-start-timeout #(.setScheduleToStartTimeout ^ActivityOptions$Builder %1 %2)
+   :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)})
+
+(defn import-invoke-options
+  [{:keys [start-to-close-timeout schedule-to-close-timeout] :as params}]
+  (cond-> params
+    (every? nil? [start-to-close-timeout schedule-to-close-timeout])
+    (assoc :start-to-close-timeout (Duration/ofSeconds 3))))
 
 (defn invoke-options->
   ^ActivityOptions [params]
-  (u/build (ActivityOptions/newBuilder) invoke-option-spec params))
+  (u/build (ActivityOptions/newBuilder) invoke-option-spec (import-invoke-options params)))
 
 (def local-invoke-option-spec
   {:start-to-close-timeout    #(.setStartToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
@@ -29,7 +46,7 @@
 
 (defn local-invoke-options->
   ^LocalActivityOptions [params]
-  (u/build (LocalActivityOptions/newBuilder) local-invoke-option-spec params))
+  (u/build (LocalActivityOptions/newBuilder (LocalActivityOptions/getDefaultInstance)) local-invoke-option-spec (import-invoke-options params)))
 
 (extend-protocol p/Datafiable
   ActivityInfo

@@ -5,7 +5,7 @@
             [clojure.datafy :as d]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
-            [temporal.internal.common :as common]
+            [temporal.common :as common]
             [temporal.internal.utils :as u]
             [temporal.internal.signals :as s])
   (:import [io.temporal.workflow Workflow WorkflowInfo]
@@ -24,7 +24,7 @@
 
 (defn wf-options->
   ^WorkflowOptions [params]
-  (u/build (WorkflowOptions/newBuilder) wf-option-spec params))
+  (u/build (WorkflowOptions/newBuilder (WorkflowOptions/getDefaultInstance)) wf-option-spec params))
 
 (extend-protocol p/Datafiable
   WorkflowInfo
