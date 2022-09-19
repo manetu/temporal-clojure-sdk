@@ -6,7 +6,7 @@
             [temporal.workflow :refer [defworkflow] :as w]
             [temporal.activity :refer [defactivity] :as a]
             [temporal.signals :refer [poll <! >!]]
-            [temporal.core :as core]
+            [temporal.side-effect :refer [gen-uuid]]
             [environ.core :refer [env]])
   (:import [java.time Duration]
            [io.temporal.workflow Workflow]))
@@ -16,7 +16,7 @@
   (log/info "starting mutex workflow:" (w/get-info))
   (loop []
     (when-let [sender-id (poll signals ::acquire)]
-      (let [release-ch (core/gen-uuid)]
+      (let [release-ch (gen-uuid)]
         (log/info "granting:" sender-id "release-ch:" release-ch)
         (>! sender-id ::acquired release-ch)
         (log/info "waiting for release")
