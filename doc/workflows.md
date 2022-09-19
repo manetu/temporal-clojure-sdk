@@ -147,7 +147,7 @@ Doing so ensures that the origination rules are met regardless of the outcome of
 
 ### Await
 
-You may use [temporal.core/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.core#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
+You may use [temporal.workflow/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
 
 ### Temporal Signals
 
