@@ -3,7 +3,7 @@
 (ns temporal.signals
   "Methods for managing signals from within workflows"
   (:require [taoensso.timbre :as log]
-            [temporal.core :as core]
+            [temporal.workflow :as w]
             [temporal.internal.utils :as u]
             [temporal.internal.signals :as s])
   (:import [io.temporal.workflow Workflow]))
@@ -36,7 +36,7 @@
   ([state] (<! state ::default))
   ([state signal-name]
    (log/trace "waiting on:" signal-name)
-   (core/await #(not (is-empty? state signal-name)))
+   (w/await #(not (is-empty? state signal-name)))
    (rx state signal-name)))
 
 (defn >!
