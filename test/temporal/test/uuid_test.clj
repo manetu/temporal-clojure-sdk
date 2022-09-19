@@ -6,14 +6,14 @@
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]
             [temporal.test.utils :as t]
-            [temporal.core :as core]))
+            [temporal.side-effect :refer [gen-uuid]]))
 
 (use-fixtures :once t/wrap-service)
 
 (defworkflow uuid-workflow
   [ctx args]
   (log/info "workflow:" args)
-  (core/gen-uuid))
+  (gen-uuid))
 
 (deftest the-test
   (testing "Verifies that we can use the side-effect safe gen-uuid"

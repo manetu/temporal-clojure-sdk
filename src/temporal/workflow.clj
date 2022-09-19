@@ -1,17 +1,30 @@
 ;; Copyright © 2022 Manetu, Inc.  All rights reserved
 
 (ns temporal.workflow
-  "Methods for defining Temporal workflows"
+  "Methods for defining and implementing Temporal workflows"
   (:require [taoensso.timbre :as log]
             [temporal.internal.utils :as u]
-            [temporal.internal.workflow :as w]))
+            [temporal.internal.workflow :as w])
+  (:import [io.temporal.workflow Workflow]
+           [java.util.function Supplier]))
 
 (defn get-info
-  "
-Return info about the current workflow
-"
+  "Return info about the current workflow"
   []
   (w/get-info))
+
+(defn- ->supplier
+  [f]
+  (reify Supplier
+    (get [_]
+      (f))))
+
+(defn await
+  "Efficiently parks the workflow until 'pred' evaluates to true.  Re-evaluates on each state transition"
+  ([pred]
+   (Workflow/await (->supplier pred)))
+  ([duration pred]
+   (Workflow/await duration (->supplier pred))))
 
 (defmacro defworkflow
   "
