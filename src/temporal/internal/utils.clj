@@ -69,12 +69,11 @@
                       (vals))]
         (throw (ex-info "conflict detected: All temporal workflows and activities must be uniquely named" {:conflicts data}))))))
 
-(def get-annotated-fns
-  (memoize
-   (fn [marker]
-     (let [data (find-annotated-fns marker)]
-       (verify-registered-fns data)
-       (m/index-by :name data)))))
+(defn get-annotated-fns
+  [marker]
+  (let [data (find-annotated-fns marker)]
+    (verify-registered-fns data)
+    (m/index-by :name data)))
 
 (defn find-dispatch-fn
   "Finds any functions named 't' that carry metadata 'marker'"
