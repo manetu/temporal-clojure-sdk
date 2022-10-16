@@ -6,7 +6,8 @@
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.workflow Workflow]
-           [java.util.function Supplier]))
+           [java.util.function Supplier]
+           [java.time Duration]))
 
 (defn get-info
   "Return info about the current workflow"
@@ -14,7 +15,7 @@
   (w/get-info))
 
 (defn- ->supplier
-  [f]
+  ^Supplier [f]
   (reify Supplier
     (get [_]
       (f))))
@@ -23,7 +24,7 @@
   "Efficiently parks the workflow until 'pred' evaluates to true.  Re-evaluates on each state transition"
   ([pred]
    (Workflow/await (->supplier pred)))
-  ([duration pred]
+  ([^Duration duration pred]
    (Workflow/await duration (->supplier pred))))
 
 (defmacro defworkflow
