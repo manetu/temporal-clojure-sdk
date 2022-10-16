@@ -8,25 +8,33 @@
 
 (defn create
   "
-Creates a mock environment and an associated client connection for emulating the combination of a worker and a Temporal
-backend, suitable for unit testing.
+Creates a mock Temporal backend, suitable for unit testing.
+
+A worker may be created with [[start]] and a client may be connected with [[get-client]]
+"
+  []
+  (TestWorkflowEnvironment/newInstance))
+
+(defn start
+  "
+Starts a Temporal worker associated with the mock environment created with [[create]].
 
 Arguments:
 
   - `options`:  See [[temporal.client.worker/worker-options]]
 
 ```clojure
-(let [{:keys [client] :as instance} (create {:task-queue ::my-queue :ctx {:some \"context\"}}]
+(let [env (create)]
+  (start env {:task-queue ::my-queue :ctx {:some \"context\"}})
   ;; create and invoke workflows
-  (stop instance))
+  (stop env))
 ```
 "
-  [{:keys [task-queue] :as options}]
-  (let [env (TestWorkflowEnvironment/newInstance)
-        worker (.newWorker env (u/namify task-queue))]
+  [env {:keys [task-queue] :as options}]
+  (let [worker (.newWorker env (u/namify task-queue))]
     (worker/init worker options)
     (.start env)
-    {:env env :worker worker :client (.getWorkflowClient env)}))
+    :ok))
 
 (defn stop
   "
@@ -37,7 +45,7 @@ see [[synchronized-stop]].
 (stop instance)
 ```
 "
-  [{:keys [^TestWorkflowEnvironment env]}]
+  [^TestWorkflowEnvironment env]
   (.shutdown env))
 
 (defn synchronized-stop
@@ -49,5 +57,10 @@ see [[stop]]
 (synchronized-stop instance)
 ```
 "
-  [{:keys [^TestWorkflowEnvironment env]}]
+  [^TestWorkflowEnvironment env]
   (.close env))
+
+(defn get-client
+  "Returns a client instance associated with the mock environment created by [[create]]"
+  [env]
+  (.getWorkflowClient env))

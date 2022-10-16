@@ -31,12 +31,16 @@ You can use the provided environment with a Clojure unit testing framework of yo
 
 (deftest my-test
   (testing "Verifies that we can invoke our greeter workflow"
-    (let [{:keys [client] :as env} (e/create {:task-queue task-queue})
-          (c/create-workflow client greeter-workflow {:task-queue task-queue})]
-      (c/start workflow {:name "Bob"})
+    (let [env    (e/create)
+          client (e/get-client env)]
+      (e/start env {:task-queue task-queue})
+      (let [workflow (c/create-workflow client greeter-workflow {:task-queue task-queue})]
+        (c/start workflow {:name "Bob"}))
       (is (= @(c/get-result workflow) "Hi, Bob")))))
 ```
 
-The primary difference between this test and a real-world application is the use of [temporal.testing.env/create](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.testing.env#create) function.  This method simultaneously creates an instance of the in-memory Temporal service *and* a client already connected to this environment.
+The primary difference between this test and a real-world application is the use of [temporal.testing.env/create](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.testing.env#create) function.  The features in the temporal.testing.env namespace allow you to create an instance of an in-memory Temporal service along with an associated Temporal worker and client connected to this instance.
 
-Typical tests may opt to create the testing environment within a [fixture](https://clojuredocs.org/clojure.test/use-fixtures), but this is left as an exercise to the reader.  The testing environment may be cleanly shutdown with [temporal.testing.env/stop](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.testing.env#stop).
+Typical tests may opt to create the testing environment within a [fixture](https://clojuredocs.org/clojure.test/use-fixtures), but this is left as an exercise to the reader.
+
+The testing environment may be cleanly shutdown with [temporal.testing.env/stop](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.testing.env#stop).
