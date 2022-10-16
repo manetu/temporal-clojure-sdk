@@ -5,20 +5,20 @@
             :url "https://www.apache.org/licenses/LICENSE-2.0"
             :year 2022
             :key "apache-2.0"}
-  :plugins [[lein-cljfmt "0.8.2"]
+  :plugins [[lein-cljfmt "0.9.0"]
             [lein-kibit "0.1.8"]
             [lein-bikeshed "0.5.2"]
             [lein-cloverage "1.2.4"]
-            [jonase/eastwood "1.2.4"]
+            [jonase/eastwood "1.3.0"]
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/core.async "1.5.648"]
                  [io.temporal/temporal-sdk "1.16.0"]
                  [io.temporal/temporal-testing "1.16.0"]
-                 [com.taoensso/encore "3.24.0"]
+                 [com.taoensso/encore "3.26.0"]
                  [com.taoensso/timbre "5.2.1"]
                  [com.taoensso/nippy "3.2.0"]
-                 [funcool/promesa "8.0.450"]
+                 [funcool/promesa "9.0.477"]
                  [medley "1.4.0"]]
   :repl-options {:init-ns user}
   :java-source-paths ["src"]
