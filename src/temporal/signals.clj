@@ -32,12 +32,19 @@
     (rx state signal-name)))
 
 (defn <!
-  "Light-weight/parking receive of a single message"
+  "Light-weight/parking receive of a single message with an optional timeout"
   ([state] (<! state ::default))
-  ([state signal-name]
-   (log/trace "waiting on:" signal-name)
-   (w/await #(not (is-empty? state signal-name)))
-   (rx state signal-name)))
+  ([state signal-name] (<! state signal-name nil))
+  ([state signal-name timeout]
+   (log/trace "waiting on:" signal-name "with timeout" timeout)
+   (let [pred #(not (is-empty? state signal-name))]
+     (if (some? timeout)
+       (do
+         (when (w/await timeout pred)
+           (rx state signal-name)))
+       (do
+         (w/await pred)
+         (rx state signal-name))))))
 
 (defn >!
   "Sends `payload` to `workflow-id` via signal `signal-name`."
