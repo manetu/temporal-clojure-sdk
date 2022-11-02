@@ -33,7 +33,8 @@
 
 (def ^:no-doc client-options
   {:identity                  #(.setIdentity ^WorkflowClientOptions$Builder %1 %2)
-   :namespace                 #(.setNamespace ^WorkflowClientOptions$Builder %1 %2)})
+   :namespace                 #(.setNamespace ^WorkflowClientOptions$Builder %1 %2)
+   :data-converter            #(.setDataConverter ^WorkflowClientOptions$Builder %1 %2)})
 
 (defn ^:no-doc client-options->
   ^WorkflowClientOptions [params]
@@ -57,6 +58,7 @@ Arguments:
 | :target                   | Sets the connection host:port                                               | String       | \"127.0.0.1:7233\" |
 | :identity                 | Overrides the worker node identity (workers only)                           | String       | |
 | :namespace                | Sets the Temporal namespace context for this client                         | String       | |
+| :data-converter           | Overrides the data converter used to serialize arguments and results.       | [DataConverter](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DataConverter.html) | |
 | :channel                  | Sets gRPC channel to use. Exclusive with target and sslContext              | [ManagedChannel](https://grpc.github.io/grpc-java/javadoc/io/grpc/ManagedChannel.html) | |
 | :ssl-context              | Sets gRPC SSL Context to use                                                | [SslContext](https://netty.io/4.0/api/io/netty/handler/ssl/SslContext.html) | |
 | :enable-https             | Sets option to enable SSL/TLS/HTTPS for gRPC                                | boolean      | false |
