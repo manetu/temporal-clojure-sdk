@@ -15,10 +15,10 @@
                  [org.clojure/core.async "1.6.673"]
                  [io.temporal/temporal-sdk "1.17.0"]
                  [io.temporal/temporal-testing "1.17.0"]
-                 [com.taoensso/encore "3.31.0"]
-                 [com.taoensso/timbre "6.0.1"]
+                 [com.taoensso/encore "3.46.0"]
+                 [com.taoensso/timbre "6.0.4"]
                  [com.taoensso/nippy "3.2.0"]
-                 [funcool/promesa "9.0.494"]
+                 [funcool/promesa "9.2.542"]
                  [medley "1.4.0"]]
   :repl-options {:init-ns user}
   :java-source-paths ["src"]
@@ -28,7 +28,7 @@
   :codox {:metadata {:doc/format :markdown}}
 
   :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.3.0"]
-                                    [eftest "0.5.9"]]}}
+                                    [eftest "0.6.0"]]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
