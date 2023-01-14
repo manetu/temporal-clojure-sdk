@@ -27,6 +27,11 @@
   ([^Duration duration pred]
    (Workflow/await duration (->supplier pred))))
 
+(defn sleep
+  "Efficiently parks the workflow for 'duration'"
+  [^Duration duration]
+  (Workflow/sleep duration))
+
 (defmacro defworkflow
   "
 Defines a new workflow, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
