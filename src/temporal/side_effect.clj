@@ -2,11 +2,10 @@
 
 (ns temporal.side-effect
   "Methods for managing side-effects from within workflows"
-  (:require [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
+  (:require [taoensso.nippy :as nippy]
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [io.temporal.workflow Workflow]
-           [java.time LocalTime]))
+           [java.time Instant]))
 
 (defn gen-uuid
   "A side-effect friendly random UUID generator"
@@ -21,6 +20,6 @@
                         (->Func (fn [] (nippy/freeze (f)))))))
 
 (defn now
-  "Returns the java.time.LocalTime as a SideEffect"
+  "Returns the java.time.Instant as a SideEffect"
   []
-  (invoke #(LocalTime/now)))
+  (invoke #(Instant/now)))
