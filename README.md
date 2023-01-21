@@ -3,22 +3,28 @@
 [![Clojars Project](https://img.shields.io/clojars/v/io.github.manetu/temporal-sdk.svg)](https://clojars.org/io.github.manetu/temporal-sdk)
 
 [Temporal](https://github.com/temporalio/temporal) is a Workflow-as-Code platform for building and operating
-resilient applications using developer-friendly primitives, instead of constantly fighting your infrastructure.
+resilient applications using developer-friendly primitives instead of constantly fighting your infrastructure.
 
-This Clojure SDK is a framework for authoring Workflows and Activities in Clojure. (For other languages, see [Temporal SDKs](https://docs.temporal.io/application-development).)
+This Clojure SDK is a framework for authoring Workflows and Activities in Clojure.  (For other languages, see [Temporal SDKs](https://docs.temporal.io/application-development).)
 
 ### Status
 
 **Alpha**
 
-This SDK is functional, but undergoing active development.  Some major features (Queries, Child-Workflows, SideEffects, etc) are missing/incomplete.  API may evolve in breaking ways, though we will always bump at least the minor version when this happens and include a note.
+This SDK is battle-tested and used in production but is undergoing active development and is subject to breaking changes (*).  Some significant features (Versioning, Queries, and Child-Workflows, etc) are missing/incomplete.
+
+> (*) We will always bump at least the minor version when breaking changes are introduced and include a release note.
 
 ### Clojure SDK
 
 - [Clojure SDK and API documentation](https://cljdoc.org/d/io.github.manetu/temporal-sdk)
 - [Clojure Samples](./samples/README.md)
+- Presentations
+    - [Boston Clojure Group Meetup 1/19/23](https://www.meetup.com/boston-clojure-group/events/290502741/)
+        - [Video Recording](https://youtu.be/gztsbSP5I3s)
+        - [Slides](https://docs.google.com/presentation/d/1D7cd4UUI_6ZEzd7RbSgujB-5PsD-EDGE)
 
-### Temporal in general
+### Temporal, in general
 
 - [Temporal docs](https://docs.temporal.io/)
 - [Install Temporal Server](https://docs.temporal.io/docs/server/quick-install)
@@ -30,7 +36,7 @@ This SDK is functional, but undergoing active development.  Some major features 
 
 ## Contributing
 
-Pull requests welcome.  Please be sure to include a [DCO](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin) in any commit messages.
+Pull requests are welcome.  Please include a [DCO](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin) in any commit messages.
 
 ## License
 
