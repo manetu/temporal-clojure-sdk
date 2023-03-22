@@ -1,4 +1,4 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © 2022-2023 Manetu, Inc.  All rights reserved
 
 (ns temporal.activity
   "Methods for defining and invoking activity tasks"
@@ -8,7 +8,38 @@
             [temporal.internal.activity :as a]
             [temporal.internal.utils :as u]
             [temporal.internal.promise])                    ;; needed for IPromise protocol extention
-  (:import [io.temporal.workflow Workflow]))
+  (:import [io.temporal.workflow Workflow]
+           [io.temporal.activity Activity]))
+
+(defn heartbeat
+  "
+Used to notify the Workflow Execution that the Activity Execution is alive.
+
+Arguments:
+
+- `details`: The details are accessible through [[get-heartbeat-details]] on the next Activity Execution retry.
+"
+  [details]
+  (let [ctx (Activity/getExecutionContext)]
+    (log/trace "heartbeat:" details)
+    (.heartbeat ctx (nippy/freeze details))))
+
+(defn get-heartbeat-details
+  "
+Extracts Heartbeat details from the last failed attempt. This is used in combination with retry options. An Activity
+Execution could be scheduled with optional [[temporal.common/retry-options]]. If an Activity Execution failed then the
+server would attempt to dispatch another Activity Task to retry the execution according to the retry options. If there
+were Heartbeat details reported by [[heartbeat]] in the last Activity Execution that failed, they would be delivered
+along with the Activity Task for the next retry attempt and can be extracted by the Activity implementation.
+"
+  []
+
+  (let [ctx (Activity/getExecutionContext)
+        details (.getHeartbeatDetails ctx u/bytes-type)]
+    (let [v (when (.isPresent details)
+              (nippy/thaw (.get details)))]
+      (log/trace "get-heartbeat-details:" v)
+      v)))
 
 (defn- complete-invoke
   [activity result]
