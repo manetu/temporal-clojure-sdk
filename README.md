@@ -23,6 +23,7 @@ This SDK is battle-tested and used in production but is undergoing active develo
     - [Boston Clojure Group Meetup 1/19/23](https://www.meetup.com/boston-clojure-group/events/290502741/)
         - [Video Recording](https://youtu.be/gztsbSP5I3s)
         - [Slides](https://docs.google.com/presentation/d/1D7cd4UUI_6ZEzd7RbSgujB-5PsD-EDGE)
+- [Clojurian Slack Channel](https://clojurians.slack.com/archives/C056TDVQ5L1)
 
 ### Temporal, in general
 
