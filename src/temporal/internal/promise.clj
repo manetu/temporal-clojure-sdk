@@ -3,17 +3,22 @@
 (ns ^:no-doc temporal.internal.promise
   (:require [taoensso.timbre :as log]
             [promesa.protocols :as pt]
-            [promesa.util :as pu]
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
-           [java.util.concurrent CompletableFuture]))
+           [java.util.concurrent CompletableFuture]
+           [java.util.function BiFunction]))
 
 (deftype PromiseAdapter [^Promise p]
   IDeref
   (deref [_] (.get p))
   IBlockingDeref
   (deref [_ ms val] (.get p ms val)))
+
+(deftype BiFunctionWrapper [f]
+  BiFunction
+  (apply [_ a b]
+    (f a b)))
 
 (defmulti ->temporal type)
 
@@ -28,7 +33,7 @@
   (reify Promise
     (get [_] (.get x))
     (handle [_ f]
-      (.handle x (pu/->BiFunctionWrapper (fn [v e] (.apply f v e)))))
+      (.handle x (->BiFunctionWrapper (fn [v e] (.apply f v e)))))
     (isCompleted [_] (.isDone x))))
 
 (defmethod ->temporal :default
