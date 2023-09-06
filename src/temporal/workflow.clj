@@ -34,7 +34,6 @@
   [^Duration duration]
   (Workflow/sleep duration))
 
-
 (defn register-query-handler!
   "
 Registers a DynamicQueryHandler listener that handles queries sent to the workflow, using [[temporal.client.core/query]].
@@ -62,14 +61,13 @@ Arguments:
 "
   [f]
   (Workflow/registerListener
-    (reify DynamicQueryHandler
-      (handle [_ query-type args]
-        (let [query-type (keyword query-type)
-              args (u/->args args)]
-          (log/trace "handling query->" "query-type:" query-type "args:" args)
-          (-> (f query-type args)
-              (nippy/freeze)))))))
-
+   (reify DynamicQueryHandler
+     (handle [_ query-type args]
+       (let [query-type (keyword query-type)
+             args (u/->args args)]
+         (log/trace "handling query->" "query-type:" query-type "args:" args)
+         (-> (f query-type args)
+             (nippy/freeze)))))))
 
 (defmacro defworkflow
   "
