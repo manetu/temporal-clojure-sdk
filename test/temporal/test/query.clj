@@ -12,10 +12,7 @@
 (use-fixtures :once t/wrap-service)
 
 (def signal-name ::signal)
-
-(defn lazy-signals [signals]
-  (lazy-seq (when-let [m (<! signals signal-name)]
-              (cons m (lazy-signals signals)))))
+(def query-name ::query)
 
 (defworkflow state-query-workflow
   [ctx {:keys [signals] {:keys [] :as args} :args}]
@@ -34,11 +31,11 @@
 
       (>! workflow signal-name {})
       (>! workflow signal-name {})
-      (is (= 2 (c/query workflow :my-query {})))
+      (is (= 2 (c/query workflow query-name {})))
 
       (>! workflow signal-name {})
-      (is (= 3 (c/query workflow :my-query {})))
+      (is (= 3 (c/query workflow query-name {})))
 
       (is (= 3 (-> workflow c/get-result deref)))
-      (is (= 3 (c/query workflow :my-query {}))))))
+      (is (= 3 (c/query workflow query-name {}))))))
 
