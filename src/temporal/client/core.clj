@@ -153,6 +153,24 @@ defworkflow once the workflow concludes.
   (-> (.getResultAsync stub u/bytes-type)
       (p/then nippy/thaw)))
 
+(defn query
+  "
+Sends query with 'query-type' and 'args' to 'workflow', returns a value.
+The query result is computed by a query-handler, registered inside the workflow definition
+using [[temporal.workflow/register-query-handler!]].
+
+Arguments:
+- `query-type`: keyword (or coerceable into a keyword)
+- `args`: serializable query params
+
+```clojure
+(query workflow ::my-query {:foo \"bar\"})
+```
+"
+  [{:keys [^WorkflowStub stub] :as workflow} query-type args]
+  (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))
+      (nippy/thaw)))
+
 (defn cancel
   "
 Gracefully cancels 'workflow'
