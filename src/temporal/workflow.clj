@@ -39,20 +39,20 @@
 Registers a DynamicQueryHandler listener that handles queries sent to the workflow, using [[temporal.client.core/query]].
 
 Use inside a workflow definition with 'f' closing over the workflow state (e.g. atom) and
-evaluating to results in function of the workflow state and its 'query-type' and 'query-params' arguments.
+evaluating to results in function of the workflow state and its 'query-type' and 'args' arguments.
 
 Arguments:
 - `f`: a 2-arity function, expecting 2 arguments, evaluating to something serializable.
 
 `f` arguments:
 - `query-type`: keyword
-- `query-args`: params value or data structure
+- `args`: params value or data structure
 
 ```clojure
 (defworkflow stateful-workflow
   [ctx {:keys [signals] {:keys [init] :as args} :args :as params}]
   (let [state (atom init)]
-    (register-query-handler! (fn [query-type query-params]
+    (register-query-handler! (fn [query-type args]
                                (when (= query-type :answer)
                                  (get-in @state [:path :to :answer]))))
     ;; workflow implementation
