@@ -99,13 +99,13 @@ Create a new workflow-stub instance, suitable for managing and interacting with 
   "
   ([^WorkflowClient client workflow-id]
    (let [stub    (.newUntypedWorkflowStub client workflow-id)]
-    (log/trace "create-workflow id:" workflow-id)
-    {:client client :stub stub}))
+     (log/trace "create-workflow id:" workflow-id)
+     {:client client :stub stub}))
   ([^WorkflowClient client workflow options]
    (let [wf-name (w/get-annotated-name workflow)
-        stub    (.newUntypedWorkflowStub client wf-name (w/wf-options-> options))]
-    (log/trace "create-workflow:" wf-name options)
-    {:client client :stub stub})))
+         stub    (.newUntypedWorkflowStub client wf-name (w/wf-options-> options))]
+     (log/trace "create-workflow:" wf-name options)
+     {:client client :stub stub})))
 
 (defn start
   "
