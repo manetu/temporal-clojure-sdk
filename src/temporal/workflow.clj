@@ -53,7 +53,7 @@ Arguments:
   [ctx {:keys [signals] {:keys [init] :as args} :args :as params}]
   (let [state (atom init)]
     (register-query-handler! (fn [query-type args]
-                               (when (= query-type :answer)
+                               (when (= query-type :my-query)
                                  (get-in @state [:path :to :answer]))))
     ;; workflow implementation
     ))
