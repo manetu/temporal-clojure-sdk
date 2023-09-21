@@ -174,7 +174,7 @@ A temporal query is similar to a temporal signal, both are messages sent to a ru
 The difference is that a signal intends to change the behaviour of the Workflow, whereas a query intends to inspect the current state of the Workflow.
 Querying the state of a Workflow implies that the Workflow must maintain state while running, typically in a clojure [atom](https://clojuredocs.org/clojure.core/atom).
 
-#### Registering a query handler
+#### Registering a Query handler
 
 To enable querying a Workflow, you may use [temporal.workflow/register-query-handler!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#register-query-handler!).
 The query handler is a function that has a reference to the Workflow state, usually by closing over it. It interprets the query and returns a response.
@@ -186,16 +186,14 @@ The query handler is a function that has a reference to the Workflow state, usua
     (register-query-handler! (fn [query-type args]
                                (when (= query-type :my-query)
                                  (get-in @state [:path :to :answer]))))
-    
-    ;; e.g. react to signals (perhaps in a loop), update the state atom
-    
+    ;; e.g. react to signals (perhaps in a loop), updating the state atom
     ))
 ```
 
-#### Querying a running workflow
+#### Querying a Workflow
 
 You may query a Workflow with [temporal.client.core/query](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#query).
-A query consists of a `query-type` (keyword) and possibly some `args`.
+A query consists of a `query-type` (keyword) and possibly some `args` (any serializable data structure).
 
 ```clojure
 (query workflow :my-query {:foo "bar"})
