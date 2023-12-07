@@ -1,4 +1,4 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.client.worker
   "Methods for managing a Temporal worker instance"

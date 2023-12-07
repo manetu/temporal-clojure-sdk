@@ -3,7 +3,7 @@
   :url "https://github.com/manetu/temporal-clojure-sdk"
   :license {:name "Apache License 2.0"
             :url "https://www.apache.org/licenses/LICENSE-2.0"
-            :year 2022
+            :year 2023
             :key "apache-2.0"}
   :plugins [[lein-cljfmt "0.9.0"]
             [lein-kibit "0.1.8"]
@@ -12,12 +12,12 @@
             [jonase/eastwood "1.3.0"]
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.11.1"]
-                 [org.clojure/core.async "1.6.673"]
-                 [io.temporal/temporal-sdk "1.19.1"]
-                 [io.temporal/temporal-testing "1.19.1"]
-                 [com.taoensso/encore "3.59.0"]
-                 [com.taoensso/timbre "6.1.0"]
-                 [com.taoensso/nippy "3.2.0"]
+                 [org.clojure/core.async "1.6.681"]
+                 [io.temporal/temporal-sdk "1.22.3"]
+                 [io.temporal/temporal-testing "1.22.3"]
+                 [com.taoensso/encore "3.74.0"]
+                 [com.taoensso/timbre "6.3.1"]
+                 [com.taoensso/nippy "3.3.0"]
                  [funcool/promesa "9.2.542"]
                  [medley "1.4.0"]]
   :repl-options {:init-ns user}

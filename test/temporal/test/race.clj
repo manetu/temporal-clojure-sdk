@@ -1,4 +1,4 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © Manetu, Inc.  All rights reserved
 (ns temporal.test.race
   (:require [clojure.test :refer :all]
             [clojure.core.async :refer [go <!] :as async]
