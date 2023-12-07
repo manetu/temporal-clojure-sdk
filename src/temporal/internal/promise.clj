@@ -1,4 +1,4 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns ^:no-doc temporal.internal.promise
   (:require [taoensso.timbre :as log]

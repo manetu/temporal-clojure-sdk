@@ -1,4 +1,4 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
@@ -25,7 +25,8 @@
    :enable-keepalive         #(.setEnableKeepAlive ^WorkflowServiceStubsOptions$Builder %1 %2)
    :keepalive-time           #(.setKeepAliveTime ^WorkflowServiceStubsOptions$Builder %1 %2)
    :keepalive-timeout        #(.setKeepAliveTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :keepalive-without-stream #(.setKeepAlivePermitWithoutStream ^WorkflowServiceStubsOptions$Builder %1 %2)})
+   :keepalive-without-stream #(.setKeepAlivePermitWithoutStream ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :metrics-scope            #(.setMetricsScope ^WorkflowServiceStubsOptions$Builder %1 %2)})
 
 (defn ^:no-doc stub-options->
   ^WorkflowServiceStubsOptions [params]
@@ -72,6 +73,7 @@ Arguments:
 | :keepalive-time           | Set the keep alive time                                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :keepalive-timeout        | Set the keep alive timeout                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :keepalive-without-stream | Set if client sends keepalive pings even with no active RPCs                | boolean       | false |
+| :metrics-scope            | The scope to be used for metrics reporting                                  | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
 
 "
   ([] (create-client {}))

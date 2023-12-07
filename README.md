@@ -41,7 +41,7 @@ Pull requests are welcome.  Please include a [DCO](https://en.wikipedia.org/wiki
 
 ## License
 
-Copyright (C) 2022 Manetu, Inc. All Rights Reserved.
+Copyright (C) Manetu, Inc. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this material except in compliance with the License.

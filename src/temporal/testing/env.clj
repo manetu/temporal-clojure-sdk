@@ -1,19 +1,39 @@
-;; Copyright © 2022 Manetu, Inc.  All rights reserved
+;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.testing.env
   "Methods and utilities to assist with unit-testing Temporal workflows"
   (:require [temporal.client.worker :as worker]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.testing TestWorkflowEnvironment]))
+  (:import [io.temporal.testing TestWorkflowEnvironment TestEnvironmentOptions TestEnvironmentOptions$Builder]))
+
+(def ^:no-doc test-env-options
+  {:metrics-scope            #(.setMetricsScope ^TestEnvironmentOptions$Builder %1 %2)})
+
+(defn ^:no-doc test-env-options->
+  ^TestEnvironmentOptions [params]
+  (u/build (TestEnvironmentOptions/newBuilder) test-env-options params))
 
 (defn create
   "
 Creates a mock Temporal backend, suitable for unit testing.
 
 A worker may be created with [[start]] and a client may be connected with [[get-client]]
+
+Arguments:
+
+- `options`: Client configuration option map (See below)
+
+#### options map
+
+| Value                     | Description                                                                 | Type         | Default |
+| ------------------------- | --------------------------------------------------------------------------- | ------------ | ------- |
+| :metrics-scope            | The scope to be used for metrics reporting                                  | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
+
 "
-  []
-  (TestWorkflowEnvironment/newInstance))
+  ([]
+   (TestWorkflowEnvironment/newInstance))
+  ([options]
+   (TestWorkflowEnvironment/newInstance (test-env-options-> options))))
 
 (defn start
   "
