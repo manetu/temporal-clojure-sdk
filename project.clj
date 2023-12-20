@@ -28,7 +28,8 @@
   :codox {:metadata {:doc/format :markdown}}
 
   :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.4.4"]
-                                    [eftest "0.6.0"]]}}
+                                    [eftest "0.6.0"]
+                                    [io.temporal/temporal-opentracing "1.22.3"]]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
