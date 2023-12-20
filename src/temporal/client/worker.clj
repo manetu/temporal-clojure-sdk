@@ -6,9 +6,10 @@
             [temporal.internal.activity :as a]
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.worker Worker WorkerFactory WorkerOptions WorkerOptions$Builder]
+  (:import [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
            [temporal.internal.dispatcher DynamicWorkflowProxy]
-           [io.temporal.workflow DynamicWorkflow]))
+           [io.temporal.workflow DynamicWorkflow]
+           [io.temporal.common.interceptors WorkerInterceptor]))
 
 (defn ^:no-doc  init
   "
@@ -27,6 +28,27 @@ Initializes a worker instance, suitable for real connections or unit-testing wit
                                                (reify DynamicWorkflow
                                                  (execute [_ args]
                                                    (w/execute ctx (:workflows dispatch) args)))))))))
+(def worker-factory-options
+  "
+Options for configuring the worker-factory (See [[start]])
+
+| Value                                          | Description                                                        | Type             | Default |
+| ------------                                   | ----------------------------------------------------------------- | ---------------- | ------- |
+| :enable-logging-in-replay                      |                                                                    | boolean | false       |
+| :max-workflow-thread-count                     | Maximum number of threads available for workflow execution across all workers created by the Factory. | int | 600 |
+| :worker-interceptors                           | Collection of WorkerInterceptors                                   | [WorkerInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/WorkerInterceptor.html) | |
+| :workflow-cache-size                           | To avoid constant replay of code the workflow objects are cached on a worker. This cache is shared by all workers created by the Factory. | int | 600 |
+"
+
+  {:enable-logging-in-replay             #(.setEnableLoggingInReplay ^WorkerFactoryOptions$Builder %1 %2)
+   :max-workflow-thread-count            #(.setMaxWorkflowThreadCount ^WorkerFactoryOptions$Builder %1 %2)
+   :worker-interceptors                  #(.setWorkerInterceptors ^WorkerFactoryOptions$Builder %1 (into-array WorkerInterceptor %2))
+   :workflow-cache-size                  #(.setWorkflowCacheSize ^WorkerFactoryOptions$Builder %1 %2)})
+
+(defn ^:no-doc worker-factory-options->
+  ^WorkerFactoryOptions [params]
+  (u/build (WorkerFactoryOptions/newBuilder (WorkerFactoryOptions/getDefaultInstance)) worker-factory-options params))
+
 (def worker-options
   "
 Options for configuring workers (See [[start]])
@@ -86,19 +108,21 @@ Starts a worker processing loop.
 
 Arguments:
 
-- `client`:     WorkflowClient instance returned from [[temporal.client.core/create-client]]
-- `options`:    Worker start options (See [[worker-options]])
+- `client`:             WorkflowClient instance returned from [[temporal.client.core/create-client]]
+- `options`:            Worker start options (See [[worker-options]])
+- `factory-options`:    WorkerFactory options (See [[worker-factory-options]])
 
 ```clojure
 (start {:task-queue ::my-queue :ctx {:some \"context\"}})
 ```
 "
-  [client {:keys [task-queue] :as options}]
-  (let [factory (WorkerFactory/newInstance client)
-        worker  (.newWorker factory (u/namify task-queue) (worker-options-> options))]
-    (init worker options)
-    (.start factory)
-    {:factory factory :worker worker}))
+  ([client options] (start client options nil))
+  ([client {:keys [task-queue] :as options} factory-options]
+   (let [factory (WorkerFactory/newInstance client (worker-factory-options-> factory-options))
+         worker  (.newWorker factory (u/namify task-queue) (worker-options-> options))]
+     (init worker options)
+     (.start factory)
+     {:factory factory :worker worker})))
 
 (defn stop
   "
