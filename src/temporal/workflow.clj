@@ -50,7 +50,7 @@ Arguments:
 
 ```clojure
 (defworkflow stateful-workflow
-  [ctx {:keys [signals] {:keys [init] :as args} :args :as params}]
+  [{:keys [init] :as args}]
   (let [state (atom init)]
     (register-query-handler! (fn [query-type args]
                                (when (= query-type :my-query)
@@ -71,19 +71,16 @@ Arguments:
 
 (defmacro defworkflow
   "
-Defines a new workflow, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
+Defines a new workflow, similar to defn, expecting a 1-arity parameter list and body.  Should evaluate to something
 serializable, which will become available for [[temporal.client.core/get-result]].
 
 Arguments:
 
-- `ctx`: Context passed through from [[temporal.client.worker/start]]
-- `params`: A map containing the following
-    - `args`: Passed from 'params' to [[temporal.client.core/start]] or [[temporal.client.core/signal-with-start]]
-    - `signals`: Signal context for use with signal calls such as [[temporal.signals/<!]] and [[temporal.signals/poll]]
+- `args`: Passed from 'params' to [[temporal.client.core/start]] or [[temporal.client.core/signal-with-start]]
 
 ```clojure
 (defworkflow my-workflow
-    [ctx {{:keys [foo]} :args}]
+    [{:keys [foo]}]
     ...)
 
 (let [w (create-workflow client my-workflow {:task-queue ::my-task-queue})]
@@ -93,8 +90,17 @@ Arguments:
   [name params* & body]
   (let [fqn (u/get-fq-classname name)
         sname (str name)]
-    `(def ~name ^{::w/def {:name ~sname :fqn ~fqn}}
-       (fn [ctx# args#]
-         (log/trace (str ~fqn ": ") args#)
-         (let [f# (fn ~params* (do ~@body))]
-           (f# ctx# args#))))))
+    (if (= (count params*) 2)                               ;; legacy
+      (do
+        (println (str *file* ":" (:line (meta &form)) " WARN: (defworkflow " name ") with [ctx {:keys [signals args]}] is deprecated.  Use [args] form."))
+        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn :type :legacy}}
+           (fn [ctx# args#]
+             (log/trace (str ~fqn ": ") args#)
+             (let [f# (fn ~params* (do ~@body))]
+               (f# ctx# args#)))))
+      (do
+        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn}}
+           (fn [args#]
+             (log/trace (str ~fqn ": ") args#)
+             (let [f# (fn ~params* (do ~@body))]
+               (f# args#))))))))

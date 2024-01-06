@@ -9,42 +9,42 @@
   (:import [io.temporal.workflow Workflow]))
 
 (defn is-empty?
-  "Returns 'true' if 'signal-name' either doesn't exist or exists but has no pending messages"
-  [state signal-name]
+  "Returns 'true' if 'signal-name' either doesn't exist within signal-chan or exists but has no pending messages"
+  [signal-chan signal-name]
   (let [signal-name (u/namify signal-name)
-        ch (s/get-ch @state signal-name)
+        ch (s/get-ch @signal-chan signal-name)
         r (or (nil? ch) (.isEmpty ch))]
-    (log/trace "is-empty?:" @state signal-name r)
+    (log/trace "is-empty?:" @signal-chan signal-name r)
     r))
 
 (defn- rx
-  [state signal-name]
+  [signal-chan signal-name]
   (let [signal-name (u/namify signal-name)
-        ch (s/get-ch @state signal-name)
+        ch (s/get-ch @signal-chan signal-name)
         m (.poll ch)]
     (log/trace "rx:" signal-name m)
     m))
 
 (defn poll
-  "Non-blocking check of the signal.  Consumes and returns a message if found, otherwise returns 'nil'"
-  [state signal-name]
-  (when-not (is-empty? state signal-name)
-    (rx state signal-name)))
+  "Non-blocking check of the signal via signal-chan.  Consumes and returns a message if found, otherwise returns 'nil'"
+  [signal-chan signal-name]
+  (when-not (is-empty? signal-chan signal-name)
+    (rx signal-chan signal-name)))
 
 (defn <!
-  "Light-weight/parking receive of a single message with an optional timeout"
-  ([state] (<! state ::default))
-  ([state signal-name] (<! state signal-name nil))
-  ([state signal-name timeout]
+  "Light-weight/parking receive of a single message from signal-chan with an optional timeout"
+  ([signal-chan] (<! signal-chan ::default))
+  ([signal-chan signal-name] (<! signal-chan signal-name nil))
+  ([signal-chan signal-name timeout]
    (log/trace "waiting on:" signal-name "with timeout" timeout)
-   (let [pred #(not (is-empty? state signal-name))]
+   (let [pred #(not (is-empty? signal-chan signal-name))]
      (if (some? timeout)
        (do
          (when (w/await timeout pred)
-           (rx state signal-name)))
+           (rx signal-chan signal-name)))
        (do
          (w/await pred)
-         (rx state signal-name))))))
+         (rx signal-chan signal-name))))))
 
 (defn >!
   "Sends `payload` to `workflow-id` via signal `signal-name`."
@@ -52,3 +52,34 @@
   (let [signal-name (u/namify signal-name)
         stub (Workflow/newUntypedExternalWorkflowStub workflow-id)]
     (.signal stub signal-name (u/->objarray payload))))
+
+(def register-signal-handler!
+  "
+Registers a DynamicSignalHandler listener that handles signals sent to the workflow such as with [[>!]].
+
+Use inside a workflow definition with 'f' closing over any desired workflow state (e.g. atom) to mutate
+the workflow state.
+
+Arguments:
+- `f`: a 2-arity function, expecting 2 arguments.
+
+`f` arguments:
+- `signal-name`: string
+- `args`: params value or data structure
+
+```clojure
+(defworkflow signalled-workflow
+  [{:keys [init] :as args}]
+  (let [state (atom init)]
+    (register-signal-handler! (fn [signal-name args]
+                                (when (= signal-name \"mysignal\")
+                                  (update state #(conj % args)))))
+    ;; workflow implementation
+    ))
+```"
+  s/register-signal-handler!)
+
+(def create-signal-chan
+  "Registers the calling workflow to receive signals and returns a 'signal-channel' context for use with functions such as [[<!]] amd [[poll]]"
+  s/create-signal-chan)
+

@@ -12,7 +12,7 @@
 (use-fixtures :once t/wrap-service)
 
 (defworkflow side-effect-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "workflow:" args)
   (side-effect/now))
 

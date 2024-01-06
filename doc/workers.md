@@ -25,7 +25,7 @@ As a simple example, let's say we want our Worker to be able to execute the foll
   (str "Hi, " name))
 
 (defworkflow greeter-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "greeter-workflow:" args)
   @(a/invoke greet-activity args))
 ```

@@ -10,7 +10,7 @@ In this Clojure SDK programming model, a Temporal Workflow is a function declare
 
 ```clojure
 (defworkflow my-workflow
-   [ctx params]
+   [params]
    ...)
 ```
 
@@ -24,7 +24,7 @@ A Workflow implementation consists of defining a (defworkflow) function.  The pl
 (require '[temporal.workflow :refer [defworkflow]])
 
 (defworkflow my-workflow
-    [ctx {{:keys [foo]} :args}]
+    [{:keys [foo]}]
     ...)
 ```
 
@@ -65,7 +65,7 @@ In this Clojure SDK, developers manage Workflows with the following flow:
 
 ```clojure
 (defworkflow my-workflow
-  [ctx {{:keys [foo]} :args}] 
+  [{:keys [foo]}] 
   ...)
 
 (let [w (create-workflow client my-workflow {:task-queue "MyTaskQueue"})]
@@ -155,15 +155,36 @@ Your Workflow may send or receive [signals](https://cljdoc.org/d/io.github.manet
 
 #### Receiving Signals
 
-Your Workflow may either block waiting with signals with [temporal.signals/<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [temporal.signals/poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  Either way, your Workflow needs to obtain the `signals` context provided in the Workflow request map.
+##### Channel Abstraction using 'signal-chan'
 
-##### Example
+This SDK provides a [core.async](https://github.com/clojure/core.async) inspired abstraction on [Temporal Signals](https://docs.temporal.io/workflows#signal) called signal-channels. To use signal channels, your Workflow may either block waiting with signals with [temporal.signals/<!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#%3C!) or use the non-blocking [temporal.signals/poll](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#poll).  Either way, your Workflow needs to first obtain the `signal-chan` context obtained by  [temporal.signals/create-signal-chan](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#create-signal-chan).
+
+###### Example
+
+```clojure
+(require `[temporal.signals :as s])
+
+(defworkflow my-workflow
+  [args]
+  (let [signals (s/create-signal-chan)
+        message (<! signals "MySignal")]
+    ...))
+```
+
+##### Raw Signal Handling
+
+Alternatively, you may opt to handle signals directly with [temporal.signals/register-signal-handler!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals#register-signal-handler!)
+
+###### Example
 
 ```clojure
 (defworkflow my-workflow
-  [ctx {:keys [signals]}]
-  (let [message (<! signals "MySignal")]
-    ...))
+  [args]
+  (let [state (atom 0)]
+    (s/register-signal-handler! (fn [signal-name args]
+                                  (swap! state inc)))
+    (w/await (fn [] (> @state 1)))
+    @state))
 ```
 
 ### Temporal Queries
@@ -172,7 +193,7 @@ Your Workflow may respond to [queries](https://cljdoc.org/d/io.github.manetu/tem
 
 A temporal query is similar to a temporal signal, both are messages sent to a running Workflow. 
 The difference is that a signal intends to change the behaviour of the Workflow, whereas a query intends to inspect the current state of the Workflow.
-Querying the state of a Workflow implies that the Workflow must maintain state while running, typically in a clojure [atom](https://clojuredocs.org/clojure.core/atom).
+Querying the state of a Workflow implies that the Workflow must maintain state while running, typically in a clojure [atom](https://clojuredocs.org/clojure.core/atom) or [ref](https://clojure.org/reference/refs).
 
 #### Registering a Query handler
 
@@ -181,7 +202,7 @@ The query handler is a function that has a reference to the Workflow state, usua
 
 ```clojure
 (defworkflow stateful-workflow
-  [ctx {:keys [signals] {:keys [init] :as args} :args :as params}]
+  [{:keys [init] :as args}]
   (let [state (atom init)]
     (register-query-handler! (fn [query-type args]
                                (when (= query-type :my-query)

@@ -18,7 +18,7 @@
       (throw (ex-info "heartbeat details not found" {})))))
 
 (defworkflow heartbeat-workflow
-  [_ _]
+  [_]
   @(a/invoke heartbeat-activity {}))
 
 (deftest the-test

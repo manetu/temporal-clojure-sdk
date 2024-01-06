@@ -20,7 +20,7 @@
     id))
 
 (defworkflow scale-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "workflow:" args)
   @(a/invoke scale-activity args))
 

@@ -36,7 +36,7 @@
 ;;-----------------------------------------------------------------------------
 
 (defworkflow traced-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "traced-workflow:" args)
   :ok)
 

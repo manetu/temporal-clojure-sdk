@@ -11,7 +11,7 @@
 (use-fixtures :once t/wrap-service)
 
 (defworkflow uuid-workflow
-  [ctx args]
+  [args]
   (log/info "workflow:" args)
   (gen-uuid))
 

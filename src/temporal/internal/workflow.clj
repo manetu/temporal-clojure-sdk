@@ -53,10 +53,13 @@
   [ctx dispatch args]
   (try
     (let [{:keys [workflow-type workflow-id]} (get-info)
-          f (u/find-dispatch-fn dispatch workflow-type)
+          d (u/find-dispatch dispatch workflow-type)
+          f (:fn d)
           a (u/->args args)
           _ (log/trace workflow-id "calling" f "with args:" a)
-          r (f ctx {:args a :signals (s/create)})]
+          r (if (-> d :type (= :legacy))
+              (f ctx {:args a :signals (s/create-signal-chan)})
+              (f a))]
       (log/trace workflow-id "result:" r)
       (nippy/freeze r))
     (catch Exception e

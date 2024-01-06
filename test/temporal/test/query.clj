@@ -2,9 +2,8 @@
 
 (ns temporal.test.query
   (:require [clojure.test :refer :all]
-            [taoensso.timbre :as log]
             [temporal.client.core :refer [>!] :as c]
-            [temporal.signals :refer [<!]]
+            [temporal.signals :refer [<!] :as s]
             [temporal.workflow :as w]
             [temporal.workflow :refer [defworkflow]]
             [temporal.test.utils :as t]))
@@ -15,8 +14,9 @@
 (def query-name ::query)
 
 (defworkflow state-query-workflow
-  [ctx {:keys [signals] {:keys [] :as args} :args}]
-  (let [state (atom 0)]
+  [args]
+  (let [state (atom 0)
+        signals (s/create-signal-chan)]
     (w/register-query-handler! (fn [query-type args]
                                  @state))
     (dotimes [n 3]

@@ -4,7 +4,7 @@
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
             [temporal.client.core :as c]
-            [temporal.signals :refer [<! >!]]
+            [temporal.signals :refer [<! >!] :as s]
             [temporal.workflow :refer [defworkflow]]
             [temporal.test.utils :as t]))
 
@@ -13,12 +13,13 @@
 (def signal-name ::signal)
 
 (defworkflow wfsignal-primary-workflow
-  [ctx {:keys [signals] :as args}]
+  [args]
   (log/info "primary-workflow:" args)
-  (<! signals signal-name))
+  (let [signals (s/create-signal-chan)]
+    (<! signals signal-name)))
 
 (defworkflow wfsignal-secondary-workflow
-  [ctx {{:keys [workflow-id msg]} :args}]
+  [{:keys [workflow-id msg]}]
   (log/info "secondary-workflow:" msg)
   (>! workflow-id signal-name msg))
 

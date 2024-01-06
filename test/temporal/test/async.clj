@@ -20,7 +20,7 @@
       (str "Hi, " name))))
 
 (defworkflow async-greeter-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "greeter-workflow:" args)
   @(a/invoke async-greet-activity args {:retry-options {:maximum-attempts 1}}))
 

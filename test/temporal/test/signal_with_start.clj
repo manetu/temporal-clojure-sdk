@@ -4,7 +4,7 @@
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
             [temporal.client.core :as c]
-            [temporal.signals :refer [<!]]
+            [temporal.signals :refer [<!] :as s]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]
             [temporal.test.utils :as t]))
@@ -19,9 +19,10 @@
   (str greeting ", " name))
 
 (defworkflow signal-greeter-workflow
-  [ctx {:keys [args signals]}]
+  [args]
   (log/info "greeter-workflow:" args)
-  (let [m (<! signals signal-name)]
+  (let [signals (s/create-signal-chan)
+        m (<! signals signal-name)]
     @(a/invoke signal-greet-activity (merge args m))))
 
 (deftest the-test
