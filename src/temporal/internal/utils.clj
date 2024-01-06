@@ -75,11 +75,16 @@
     (verify-registered-fns data)
     (m/index-by :name data)))
 
+(defn find-dispatch
+  "Finds any dispatch descriptor named 't' that carry metadata 'marker'"
+  [dispatch-table t]
+  (or (get dispatch-table t)
+      (throw (ex-info "workflow/activity not found" {:function t}))))
+
 (defn find-dispatch-fn
   "Finds any functions named 't' that carry metadata 'marker'"
   [dispatch-table t]
-  (:fn (or (get dispatch-table t)
-           (throw (ex-info "workflow/activity not found" {:function t})))))
+  (:fn (find-dispatch dispatch-table t)))
 
 (defn import-dispatch
   [marker coll]

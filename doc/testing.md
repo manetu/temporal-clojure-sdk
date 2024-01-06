@@ -25,7 +25,7 @@ You can use the provided environment with a Clojure unit testing framework of yo
   (str "Hi, " name))
 
 (defworkflow greeter-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "greeter-workflow:" args)
   @(a/invoke greet-activity args))
 

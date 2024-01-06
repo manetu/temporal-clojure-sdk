@@ -4,7 +4,7 @@
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
             [temporal.client.core :refer [>!] :as c]
-            [temporal.signals :refer [<!]]
+            [temporal.signals :refer [<!] :as s]
             [temporal.workflow :refer [defworkflow]]
             [temporal.test.utils :as t]))
 
@@ -17,9 +17,10 @@
               (cons m (lazy-signals signals)))))
 
 (defworkflow client-signal-workflow
-  [ctx {:keys [signals] {:keys [nr] :as args} :args}]
+  [{:keys [nr] :as args}]
   (log/info "test-workflow:" args)
-  (doall (take nr (lazy-signals signals))))
+  (let [signals (s/create-signal-chan)]
+    (doall (take nr (lazy-signals signals)))))
 
 (def expected 3)
 

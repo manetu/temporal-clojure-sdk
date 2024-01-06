@@ -36,12 +36,12 @@
 ;;-----------------------------------------------------------------------------
 
 (defworkflow explicitly-registered-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "registered-workflow:" args)
   :ok)
 
 (defworkflow explicitly-skipped-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "skipped-workflow:" args)
   :ok)
 

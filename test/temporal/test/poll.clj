@@ -17,9 +17,9 @@
               (cons m (lazy-signals signals)))))
 
 (defworkflow poll-workflow
-  [ctx {:keys [signals]}]
+  [_]
   (log/info "test-workflow:")
-  (doall (lazy-signals signals)))
+  (doall (lazy-signals (s/create-signal-chan))))
 
 (deftest the-test
   (testing "Verifies that poll exits with nil when there are no signals"

@@ -21,13 +21,16 @@
              (.add ch payload)
              (assoc s signal-name ch)))))
 
-(defn create
-  "Registers the calling workflow to receive signals and returns a context variable to be passed back later"
+(defn register-signal-handler!
+  [f]
+  (Workflow/registerListener
+   (reify
+     DynamicSignalHandler
+     (handle [_ signal-name args]
+       (f signal-name (u/->args args))))))
+
+(defn create-signal-chan
   []
   (let [state (atom {})]
-    (Workflow/registerListener
-     (reify
-       DynamicSignalHandler
-       (handle [_ signal-name args]
-         (-handle state signal-name (u/->args args)))))
+    (register-signal-handler! (partial -handle state))
     state))

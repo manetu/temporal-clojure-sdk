@@ -33,7 +33,7 @@ As a simple example, for the following Workflow implementation:
   (str "Hi, " name))
 
 (defworkflow greeter-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "greeter-workflow:" args)
   @(a/invoke greet-activity args))
 ```

@@ -21,7 +21,7 @@
   (a/invoke concurrency-activity x))
 
 (defworkflow concurrency-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "workflow:" args)
   @(-> (pt/all (map invoke (range 10)))
        (p/then (fn [r]

@@ -23,7 +23,7 @@
   (a/invoke race-activity x))
 
 (defworkflow race-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "workflow:" args)
   ;; invoke activities with various synthetic delays.  The last entry, index 4, should be the fastest
   (let [requests (map-indexed (fn [i x] (invoke {:id i :delay x})) [600 400 200 100 10])]

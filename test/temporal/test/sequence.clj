@@ -18,7 +18,7 @@
   (str "Hi, " args))
 
 (defworkflow sequence-workflow
-  [ctx _]
+  [_]
   @(-> (pt/resolved true)
        (p/then (fn [_]
                  (a/invoke sequence-activity "Bob")))

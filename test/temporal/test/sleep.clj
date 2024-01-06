@@ -12,7 +12,7 @@
 (use-fixtures :once t/wrap-service)
 
 (defworkflow sleep-workflow
-  [ctx {:keys [signals] :as args}]
+  [args]
   (log/info "sleep-workflow:" args)
   (w/sleep (Duration/ofSeconds 1))
   :ok)

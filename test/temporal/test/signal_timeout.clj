@@ -4,7 +4,7 @@
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
             [temporal.client.core :refer [>!] :as c]
-            [temporal.signals :refer [<!]]
+            [temporal.signals :refer [<!] :as s]
             [temporal.workflow :refer [defworkflow]]
             [temporal.test.utils :as t])
   (:import [java.time Duration]))
@@ -14,10 +14,11 @@
 (def signal-name ::signal)
 
 (defworkflow timeout-workflow
-  [ctx {:keys [signals] :as args}]
+  [args]
   (log/info "timeout-workflow:" args)
-  (or (<! signals signal-name (Duration/ofSeconds 1))
-      :timed-out))
+  (let [signals (s/create-signal-chan)]
+    (or (<! signals signal-name (Duration/ofSeconds 1))
+        :timed-out)))
 
 (defn create []
   (let [wf (c/create-workflow (t/get-client) timeout-workflow {:task-queue t/task-queue})]

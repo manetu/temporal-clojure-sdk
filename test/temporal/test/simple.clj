@@ -16,7 +16,7 @@
   (str "Hi, " name))
 
 (defworkflow simple-greeter-workflow
-  [ctx {:keys [args]}]
+  [args]
   (log/info "greeter-workflow:" args)
   @(a/invoke simple-greet-activity args))
 
