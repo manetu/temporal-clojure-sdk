@@ -126,7 +126,7 @@ Arguments:
 (local-invoke my-activity {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
 ```
 "
-  ([activity params] (invoke activity params {}))
+  ([activity params] (local-invoke activity params {}))
   ([activity params options]
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedLocalActivityStub (a/local-invoke-options-> options))]
