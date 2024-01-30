@@ -58,9 +58,10 @@
      :activity-type  (.getActivityType d)}))
 
 (defn get-info []
-  (-> (Activity/getExecutionContext)
-      (.getInfo)
-      (d/datafy)))
+  (->> (Activity/getExecutionContext)
+       (.getInfo)
+       (d/datafy)
+       (into {})))
 
 (defn get-annotation
   ^String [x]

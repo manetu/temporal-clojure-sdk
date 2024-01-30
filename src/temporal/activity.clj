@@ -41,6 +41,11 @@ along with the Activity Task for the next retry attempt and can be extracted by 
       (log/trace "get-heartbeat-details:" v)
       v)))
 
+(defn get-info
+  "Returns information about the Activity execution"
+  []
+  (a/get-info))
+
 (defn- complete-invoke
   [activity result]
   (log/trace activity "completed with" (count result) "bytes")
