@@ -6,7 +6,8 @@
             [taoensso.nippy :as nippy]
             [promesa.core :as p]
             [temporal.internal.workflow :as w]
-            [temporal.internal.utils :as u])
+            [temporal.internal.utils :as u]
+            [temporal.internal.exceptions :as e])
   (:import [java.time Duration]
            [io.temporal.client WorkflowClient WorkflowClientOptions WorkflowClientOptions$Builder WorkflowStub]
            [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]
@@ -156,7 +157,8 @@ defworkflow once the workflow concludes.
 "
   [{:keys [^WorkflowStub stub] :as workflow}]
   (-> (.getResultAsync stub u/bytes-type)
-      (p/then nippy/thaw)))
+      (p/then nippy/thaw)
+      (p/catch e/slingshot? e/recast-stone)))
 
 (defn query
   "

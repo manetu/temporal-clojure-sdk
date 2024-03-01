@@ -3,11 +3,13 @@
 (ns ^:no-doc temporal.internal.workflow
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
+            [slingshot.slingshot :refer [try+]]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [temporal.common :as common]
             [temporal.internal.utils :as u]
-            [temporal.internal.signals :as s])
+            [temporal.internal.signals :as s]
+            [temporal.internal.exceptions :as e])
   (:import [io.temporal.workflow Workflow WorkflowInfo]
            [io.temporal.client WorkflowOptions WorkflowOptions$Builder]))
 
@@ -51,17 +53,20 @@
 
 (defn execute
   [ctx dispatch args]
-  (try
-    (let [{:keys [workflow-type workflow-id]} (get-info)
-          d (u/find-dispatch dispatch workflow-type)
-          f (:fn d)
-          a (u/->args args)
-          _ (log/trace workflow-id "calling" f "with args:" a)
-          r (if (-> d :type (= :legacy))
-              (f ctx {:args a :signals (s/create-signal-chan)})
-              (f a))]
-      (log/trace workflow-id "result:" r)
-      (nippy/freeze r))
-    (catch Exception e
-      (log/error e)
-      (throw e))))
+  (try+
+   (let [{:keys [workflow-type workflow-id]} (get-info)
+         d (u/find-dispatch dispatch workflow-type)
+         f (:fn d)
+         a (u/->args args)
+         _ (log/trace workflow-id "calling" f "with args:" a)
+         r (if (-> d :type (= :legacy))
+             (f ctx {:args a :signals (s/create-signal-chan)})
+             (f a))]
+     (log/trace workflow-id "result:" r)
+     (nippy/freeze r))
+   (catch Exception e
+     (log/error e)
+     (throw e))
+   (catch Object o
+     (log/error &throw-context)
+     (e/freeze &throw-context))))

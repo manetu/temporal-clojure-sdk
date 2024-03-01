@@ -5,6 +5,7 @@
   (:require [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [promesa.core :as p]
+            [temporal.internal.exceptions :as e]
             [temporal.internal.activity :as a]
             [temporal.internal.utils :as u]
             [temporal.internal.promise])                    ;; needed for IPromise protocol extention
@@ -98,6 +99,7 @@ Arguments:
      (log/trace "invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
          (p/then (partial complete-invoke activity))
+         (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]
                     (log/error e)
                     (throw e)))))))
@@ -138,6 +140,7 @@ Arguments:
      (log/trace "local-invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
          (p/then (partial complete-invoke activity))
+         (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]
                     (log/error e)
                     (throw e)))))))

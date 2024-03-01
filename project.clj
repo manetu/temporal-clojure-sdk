@@ -19,7 +19,8 @@
                  [com.taoensso/timbre "6.3.1"]
                  [com.taoensso/nippy "3.3.0"]
                  [funcool/promesa "9.2.542"]
-                 [medley "1.4.0"]]
+                 [medley "1.4.0"]
+                 [slingshot "0.12.2"]]
   :repl-options {:init-ns user}
   :java-source-paths ["src"]
   :javac-options ["-target" "11" "-source" "11"]

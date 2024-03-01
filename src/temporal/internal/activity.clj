@@ -4,9 +4,11 @@
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
             [clojure.core.async :refer [go <!] :as async]
+            [slingshot.slingshot :refer [try+ throw+]]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [temporal.internal.utils :as u]
+            [temporal.internal.exceptions :as e]
             [temporal.common :as common])
   (:import [java.time Duration]
            [io.temporal.activity Activity ActivityInfo DynamicActivity ActivityCancellationType]
@@ -103,11 +105,14 @@
         f (u/find-dispatch-fn dispatch activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
-    (try
-      (result-> activity-id (f ctx a))
-      (catch Exception e
-        (log/error e)
-        (throw e)))))
+    (try+
+     (result-> activity-id (f ctx a))
+     (catch Exception e
+       (log/error e)
+       (throw e))
+     (catch Object o
+       (log/error &throw-context)
+       (e/freeze &throw-context)))))
 
 (defn dispatcher [ctx dispatch]
   (reify DynamicActivity
