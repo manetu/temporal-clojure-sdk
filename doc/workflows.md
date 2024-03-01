@@ -219,3 +219,21 @@ A query consists of a `query-type` (keyword) and possibly some `args` (any seria
 ```clojure
 (query workflow :my-query {:foo "bar"})
 ```
+
+## Exceptions
+
+This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with slingshot idiomatic try+ based catch blocks.
+
+### Managing Retries
+By default, stones cast that are not caught locally by an activity or workflow trigger ApplicationFailure semantics and are thus subject to the overall Retry Policies in place.   However, the developer may force a given stone to be non-retriable by setting the flag '::non-retriable?' within the object.
+
+Example:
+
+```clojure
+(require `[temporal.exceptions :as e])
+(require `[slingshot.slingshot :refer [throw+]])
+
+(defactivity my-activity
+   [ctx args]
+   (throw+ {:type ::my-fatal-error :msg "this error is non-retriable" ::e/non-retriable? true}))
+```
