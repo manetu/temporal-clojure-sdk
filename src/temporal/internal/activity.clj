@@ -107,12 +107,9 @@
     (log/trace activity-id "calling" f "with args:" a)
     (try+
      (result-> activity-id (f ctx a))
-     (catch Exception e
-       (log/error e)
-       (throw e))
      (catch Object o
        (log/error &throw-context)
-       (e/freeze &throw-context)))))
+       (e/forward &throw-context)))))
 
 (defn dispatcher [ctx dispatch]
   (reify DynamicActivity

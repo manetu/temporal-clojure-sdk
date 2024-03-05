@@ -30,7 +30,7 @@
    (catch [:type ::test1] _
      (log/info "caught stone 1")
      (try+
-      @(a/invoke slingshot-retriable-activity args)
+      @(a/invoke slingshot-retriable-activity args {:retry-options {:maximum-attempts 2}})
       (catch [:type ::test2] _
         (log/info "caught stone 2")
         (throw+ {:type ::test3}))))))
@@ -39,8 +39,8 @@
   (testing "Verifies that we can catch slingshot stones across activity/workflow boundaries"
     (let [workflow (t/create-workflow slingshot-workflow)]
       (c/start workflow {})
-      (try+
-       @(c/get-result workflow)
-       (throw (ex-info "should not get here" {}))
-       (catch [:type ::test3] _
-         (log/info "caught stone 3"))))))
+      (is (= :ok (try+
+                  @(c/get-result workflow)
+                  (throw (ex-info "should not get here" {}))
+                  (catch [:type ::test3] _
+                    :ok)))))))
