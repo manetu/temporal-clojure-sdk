@@ -158,7 +158,10 @@ defworkflow once the workflow concludes.
   [{:keys [^WorkflowStub stub] :as workflow}]
   (-> (.getResultAsync stub u/bytes-type)
       (p/then nippy/thaw)
-      (p/catch e/slingshot? e/recast-stone)))
+      (p/catch e/slingshot? e/recast-stone)
+      (p/catch (fn [e]
+                 (log/error e)
+                 (throw e)))))
 
 (defn query
   "

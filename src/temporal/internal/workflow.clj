@@ -64,9 +64,6 @@
              (f a))]
      (log/trace workflow-id "result:" r)
      (nippy/freeze r))
-   (catch Exception e
-     (log/error e)
-     (throw e))
    (catch Object o
      (log/error &throw-context)
-     (e/freeze &throw-context))))
+     (e/forward &throw-context))))
