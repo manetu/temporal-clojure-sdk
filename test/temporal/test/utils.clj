@@ -19,6 +19,9 @@
 ;;-----------------------------------------------------------------------------
 ;; Utilities
 ;;-----------------------------------------------------------------------------
+(defn get-worker []
+  (get @state :worker))
+
 (defn get-client []
   (get @state :client))
 
@@ -30,17 +33,18 @@
 ;;-----------------------------------------------------------------------------
 (defn create-service []
   (let [env    (e/create)
-        client (e/get-client env)]
-    (e/start env {:task-queue task-queue})
+        client (e/get-client env)
+        worker (e/start env {:task-queue task-queue})]
     (swap! state assoc
            :env env
+           :worker worker
            :client client)))
 
 (defn destroy-service []
   (swap! state
          (fn [{:keys [env] :as s}]
            (e/stop env)
-           (dissoc s :env :client))))
+           (dissoc s :env :worker :client))))
 
 (defn wrap-service [test-fn]
   (create-service)

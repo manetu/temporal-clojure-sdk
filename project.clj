@@ -30,6 +30,7 @@
 
   :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.4.4"]
                                     [eftest "0.6.0"]
+                                    [mockery "0.1.4"]
                                     [io.temporal/temporal-opentracing "1.22.3"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
