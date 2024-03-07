@@ -21,13 +21,13 @@ Initializes a worker instance, suitable for real connections or unit-testing wit
                    {:activities (a/import-dispatch activities) :workflows (w/import-dispatch workflows)})]
     (log/trace "init:" dispatch)
     (.registerActivitiesImplementations worker (to-array [(a/dispatcher ctx (:activities dispatch))]))
-    (.addWorkflowImplementationFactory worker DynamicWorkflowProxy
-                                       (u/->Func
-                                        (fn []
-                                          (new DynamicWorkflowProxy
-                                               (reify DynamicWorkflow
-                                                 (execute [_ args]
-                                                   (w/execute ctx (:workflows dispatch) args)))))))))
+    (.registerWorkflowImplementationFactory worker DynamicWorkflowProxy
+                                            (u/->Func
+                                             (fn []
+                                               (new DynamicWorkflowProxy
+                                                    (reify DynamicWorkflow
+                                                      (execute [_ args]
+                                                        (w/execute ctx (:workflows dispatch) args)))))))))
 (def worker-factory-options
   "
 Options for configuring the worker-factory (See [[start]])

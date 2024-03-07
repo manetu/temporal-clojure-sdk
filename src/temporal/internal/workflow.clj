@@ -34,7 +34,8 @@
     {:namespace     (.getNamespace d)
      :workflow-id   (.getWorkflowId d)
      :run-id        (.getRunId d)
-     :workflow-type (.getWorkflowType d)}))
+     :workflow-type (.getWorkflowType d)
+     :attempt       (.getAttempt d)}))
 
 (defn get-info []
   (d/datafy (Workflow/getInfo)))

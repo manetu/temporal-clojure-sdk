@@ -34,6 +34,13 @@
   [^Duration duration]
   (Workflow/sleep duration))
 
+(def default-version Workflow/DEFAULT_VERSION)
+
+(defn get-version
+  "Used to safely perform backwards incompatible changes to workflow definitions"
+  [change-id min max]
+  (Workflow/getVersion (u/namify change-id) min max))
+
 (defn register-query-handler!
   "
 Registers a DynamicQueryHandler listener that handles queries sent to the workflow, using [[temporal.client.core/query]].
