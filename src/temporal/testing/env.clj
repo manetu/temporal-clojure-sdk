@@ -62,7 +62,7 @@ Arguments:
   (let [worker (.newWorker env (u/namify task-queue))]
     (worker/init worker options)
     (.start env)
-    :ok))
+    worker))
 
 (defn stop
   "

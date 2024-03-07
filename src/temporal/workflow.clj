@@ -34,7 +34,7 @@
   [^Duration duration]
   (Workflow/sleep duration))
 
-(def default-version Workflow/DEFAULT_VERSION)
+(def default-version (int Workflow/DEFAULT_VERSION))
 
 (defn get-version
   "Used to safely perform backwards incompatible changes to workflow definitions"

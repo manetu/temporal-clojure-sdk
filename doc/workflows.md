@@ -37,7 +37,7 @@ Even though Temporal has the replay capability, which brings resilience to your 
 There are some things, however, to think about when writing your Workflows, namely determinism and isolation.  We summarize these constraints here:
 
 - Do not use any mutable global variables such as atoms in your Workflow implementations.  This will ensure that multiple Workflow instances are fully isolated.
-- Do not call any non-deterministic functions like non-seeded random or uuid-generators directly from the Workflow code. (Coming soon: SideEffect API)
+- Do not call any non-deterministic functions like non-seeded random or uuid-generators directly from the Workflow code.
 - Perform all IO operations and calls to third-party services on Activities and not Workflows, as they are usually non-deterministic.
 - Do not use any programming language constructs that rely on system time.  (Coming soon: API methods for time)
 - Do not use threading primitives such as clojure.core.async/go or clojure.core.async/thread.  (Coming soon: API methods for async function execution)
@@ -237,3 +237,24 @@ Example:
    [ctx args]
    (throw+ {:type ::my-fatal-error :msg "this error is non-retriable" ::e/non-retriable? true}))
 ```
+
+## Versioning
+
+The Temporal Platform requires that Workflow code be deterministic.  Because of that requirement, this Clojure SDK exposes a workflow patching API [temporal.workflow/get-version](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#get-version).  Workflow developers use the `get-version` function to determine the correct branch of logic to follow to maintain determinism.
+
+Example:
+
+Assume we have a workflow that invokes an activity using temporal.activity/invoke that we wish to convert to temporal.activity/local-invoke.  Changing this for future workflows is not a problem.  However, any existing workflows need to be careful as this change could introduce non-determinism.
+
+We can safely handle both the original and the new desired scenario by branching based on the results from calling temporal.workflow/get-version:
+
+```clojure
+(require `[temporal.workflow :as w])
+(require `[temporal.activity :as a])
+
+(let [version (w/get-version ::local-activity w/default-version 1)]
+    (cond
+      (= version w/default-version)  @(a/invoke versioned-activity :v1)
+      (= version 1)                  @(a/local-invoke versioned-activity :v2)))
+```
+
