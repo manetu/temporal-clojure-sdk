@@ -13,10 +13,10 @@
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/core.async "1.6.681"]
-                 [io.temporal/temporal-sdk "1.22.3"]
-                 [io.temporal/temporal-testing "1.22.3"]
-                 [com.taoensso/encore "3.74.0"]
-                 [com.taoensso/timbre "6.3.1"]
+                 [io.temporal/temporal-sdk "1.23.0"]
+                 [io.temporal/temporal-testing "1.23.0"]
+                 [com.taoensso/encore "3.90.0"]
+                 [com.taoensso/timbre "6.5.0"]
                  [com.taoensso/nippy "3.3.0"]
                  [funcool/promesa "9.2.542"]
                  [medley "1.4.0"]
@@ -28,10 +28,10 @@
   :eastwood {:add-linters [:unused-namespaces]}
   :codox {:metadata {:doc/format :markdown}}
 
-  :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.4.4"]
+  :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.5.0"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
-                                    [io.temporal/temporal-opentracing "1.22.3"]]
+                                    [io.temporal/temporal-opentracing "1.23.0"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
