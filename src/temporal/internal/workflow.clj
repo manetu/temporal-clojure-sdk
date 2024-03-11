@@ -6,27 +6,10 @@
             [slingshot.slingshot :refer [try+]]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
-            [temporal.common :as common]
             [temporal.internal.utils :as u]
             [temporal.internal.signals :as s]
             [temporal.internal.exceptions :as e])
-  (:import [io.temporal.workflow Workflow WorkflowInfo]
-           [io.temporal.client WorkflowOptions WorkflowOptions$Builder]))
-
-(def wf-option-spec
-  {:task-queue                 #(.setTaskQueue ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id                #(.setWorkflowId ^WorkflowOptions$Builder %1 %2)
-   :workflow-execution-timeout #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-run-timeout       #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-task-timeout      #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
-   :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
-   :cron-schedule              #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
-   :memo                       #(.setMemo ^WorkflowOptions$Builder %1 %2)
-   :search-attributes          #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)})
-
-(defn wf-options->
-  ^WorkflowOptions [params]
-  (u/build (WorkflowOptions/newBuilder (WorkflowOptions/getDefaultInstance)) wf-option-spec params))
+  (:import [io.temporal.workflow Workflow WorkflowInfo]))
 
 (extend-protocol p/Datafiable
   WorkflowInfo

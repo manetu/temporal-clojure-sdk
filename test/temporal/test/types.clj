@@ -3,7 +3,6 @@
 (ns temporal.test.types
   (:require [clojure.test :refer :all]
             [temporal.client.core :as client]
-            [temporal.internal.workflow :as workflow]
             [temporal.client.worker :as worker])
   (:import [java.time Duration]
            [io.grpc Grpc InsecureChannelCredentials Metadata]
@@ -11,15 +10,15 @@
 
 (deftest workflow-options
   (testing "Verify that our workflow options work"
-    (let [x (workflow/wf-options-> {:workflow-id "foo"
-                                    :task-queue "bar"
-                                    :workflow-execution-timeout (Duration/ofSeconds 1)
-                                    :workflow-run-timeout (Duration/ofSeconds 1)
-                                    :workflow-task-timeout (Duration/ofSeconds 1)
-                                    :retry-options {:maximum-attempts 1}
-                                    :cron-schedule "* * * * *"
-                                    :memo {"foo" "bar"}
-                                    :search-attributes {"foo" "bar"}})]
+    (let [x (client/wf-options-> {:workflow-id "foo"
+                                  :task-queue "bar"
+                                  :workflow-execution-timeout (Duration/ofSeconds 1)
+                                  :workflow-run-timeout (Duration/ofSeconds 1)
+                                  :workflow-task-timeout (Duration/ofSeconds 1)
+                                  :retry-options {:maximum-attempts 1}
+                                  :cron-schedule "* * * * *"
+                                  :memo {"foo" "bar"}
+                                  :search-attributes {"foo" "bar"}})]
       (is (-> x (.getWorkflowId) (= "foo")))
       (is (-> x (.getTaskQueue) (= "bar"))))))
 
