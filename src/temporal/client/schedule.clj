@@ -1,11 +1,11 @@
 (ns temporal.client.schedule
- (:require [taoensso.timbre :as log]
-           [temporal.client.options :as copts]
-           [temporal.internal.grpc :as g]
-           [temporal.internal.utils :as u]
-           [temporal.internal.schedule :as s])
- (:import [java.time Duration]
-          [io.temporal.client.schedules ScheduleClient ScheduleUpdate ScheduleUpdateInput]))
+  (:require [taoensso.timbre :as log]
+            [temporal.client.options :as copts]
+            [temporal.internal.grpc :as g]
+            [temporal.internal.utils :as u]
+            [temporal.internal.schedule :as s])
+  (:import [java.time Duration]
+           [io.temporal.client.schedules ScheduleClient ScheduleUpdate ScheduleUpdateInput]))
 
 (set! *warn-on-reflection* true)
 

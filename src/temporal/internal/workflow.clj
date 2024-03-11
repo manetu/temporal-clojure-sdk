@@ -23,7 +23,6 @@
      :workflow-type (.getWorkflowType d)
      :attempt       (.getAttempt d)}))
 
-
 (def workflow-id-reuse-options
   "
 | Value                        | Description                                                                  |
