@@ -1,6 +1,6 @@
 (ns ^:no-doc temporal.internal.grpc
-    (:require    [temporal.internal.utils :as u])
-    (:import [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]))
+  (:require [temporal.internal.utils :as u])
+  (:import [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]))
 
 (def stub-options
   {:channel                  #(.setChannel ^WorkflowServiceStubsOptions$Builder %1 %2)

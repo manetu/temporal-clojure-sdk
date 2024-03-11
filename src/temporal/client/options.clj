@@ -2,7 +2,7 @@
   (:require [temporal.internal.utils :as u])
   (:import [io.temporal.client WorkflowClientOptions WorkflowClientOptions$Builder]
            [io.temporal.common.interceptors WorkflowClientInterceptorBase]
-            [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder]))
+           [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder]))
 
 (def ^:no-doc client-options
   {:identity                  #(.setIdentity ^WorkflowClientOptions$Builder %1 %2)

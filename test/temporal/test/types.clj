@@ -44,7 +44,7 @@
       (is (-> x (.getTarget) (= "foo:1234")))))
   (testing "Verify that our client options work"
     (let [x (o/client-options-> {:identity "test"
-                                      :namespace "test"})]
+                                 :namespace "test"})]
       (is (-> x (.getIdentity) (= "test")))
       (is (-> x (.getNamespace) (= "test")))))
   (testing "Verify that mixed client/stub options work"
@@ -86,7 +86,7 @@
       (is (-> x (.getTarget) (= "foo:1234")))))
   (testing "Verify that our client options work"
     (let [x (o/schedule-client-options-> {:identity "test"
-                                        :namespace "test"})]
+                                          :namespace "test"})]
       (is (-> x (.getIdentity) (= "test")))
       (is (-> x (.getNamespace) (= "test")))))
   (testing "Verify that mixed client/stub options work"
