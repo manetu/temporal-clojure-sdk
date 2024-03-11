@@ -5,47 +5,13 @@
   (:require [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [promesa.core :as p]
-            [temporal.common :as common]
+            [temporal.client.options :as copts]
             [temporal.internal.workflow :as w]
+            [temporal.internal.grpc :as g]
             [temporal.internal.utils :as u]
             [temporal.internal.exceptions :as e])
   (:import [java.time Duration]
-           [io.temporal.client WorkflowClient WorkflowClientOptions WorkflowClientOptions$Builder WorkflowStub
-            WorkflowOptions WorkflowOptions$Builder]
-           [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]
-           [io.temporal.common.interceptors WorkflowClientInterceptorBase]
-           [io.temporal.api.enums.v1 WorkflowIdReusePolicy]))
-
-(def ^:no-doc stub-options
-  {:channel                  #(.setChannel ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :ssl-context              #(.setSslContext ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :enable-https             #(.setEnableHttps ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :target                   #(.setTarget ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :rpc-timeout              #(.setRpcTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :rpc-long-poll-timeout    #(.setRpcLongPollTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :rpc-query-timeout        #(.setRpcQueryTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :backoff-reset-freq       #(.setConnectionBackoffResetFrequency ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :grpc-reconnect-freq      #(.setGrpcReconnectFrequency ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :headers                  #(.setHeaders ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :enable-keepalive         #(.setEnableKeepAlive ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :keepalive-time           #(.setKeepAliveTime ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :keepalive-timeout        #(.setKeepAliveTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :keepalive-without-stream #(.setKeepAlivePermitWithoutStream ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :metrics-scope            #(.setMetricsScope ^WorkflowServiceStubsOptions$Builder %1 %2)})
-
-(defn ^:no-doc stub-options->
-  ^WorkflowServiceStubsOptions [params]
-  (u/build (WorkflowServiceStubsOptions/newBuilder) stub-options params))
-
-(def ^:no-doc client-options
-  {:identity                  #(.setIdentity ^WorkflowClientOptions$Builder %1 %2)
-   :namespace                 #(.setNamespace ^WorkflowClientOptions$Builder %1 %2)
-   :data-converter            #(.setDataConverter ^WorkflowClientOptions$Builder %1 %2)
-   :interceptors              #(.setInterceptors ^WorkflowClientOptions$Builder %1 (into-array WorkflowClientInterceptorBase %2))})
-
-(defn ^:no-doc client-options->
-  ^WorkflowClientOptions [params]
-  (u/build (WorkflowClientOptions/newBuilder (WorkflowClientOptions/getDefaultInstance)) client-options params))
+           [io.temporal.client WorkflowClient WorkflowStub]))
 
 (defn create-client
   "
@@ -87,43 +53,8 @@ Arguments:
   ([options]
    (create-client options (Duration/ofSeconds 5)))
   ([options timeout]
-   (let [service (WorkflowServiceStubs/newConnectedServiceStubs (stub-options-> options) timeout)]
-     (WorkflowClient/newInstance service (client-options-> options)))))
-
-(def workflow-id-reuse-options
-  "
-| Value                        | Description                                                                  |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| :allow-duplicate             | Allow starting a workflow execution using the same workflow id.             |
-| :allow-duplicate-failed-only | Allow starting a workflow execution using the same workflow id, only when the last execution's final state is one of [terminated, cancelled, timed out, failed] |
-| :reject-duplicate            | Do not permit re-use of the workflow id for this workflow.                  |
-| :terminate-if-running        | If a workflow is running using the same workflow ID, terminate it and start a new one. If no running workflow, then the behavior is the same as ALLOW_DUPLICATE|
-"
-  {:allow-duplicate             WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE
-   :allow-duplicate-failed-only WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
-   :reject-duplicate            WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
-   :terminate-if-running        WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING})
-
-(defn ^:no-doc workflow-id-reuse-policy->
-  ^WorkflowIdReusePolicy [policy]
-  (or (get workflow-id-reuse-options policy)
-      (throw (IllegalArgumentException. (str "Unknown workflow-id-reuse-policy: " policy " Must be one of " (keys workflow-id-reuse-options))))))
-
-(def ^:no-doc wf-option-spec
-  {:task-queue                 #(.setTaskQueue ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id                #(.setWorkflowId ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id-reuse-policy   #(.setWorkflowIdReusePolicy ^WorkflowOptions$Builder %1 (workflow-id-reuse-policy-> %2))
-   :workflow-execution-timeout #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-run-timeout       #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-task-timeout      #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
-   :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
-   :cron-schedule              #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
-   :memo                       #(.setMemo ^WorkflowOptions$Builder %1 %2)
-   :search-attributes          #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)})
-
-(defn ^:no-doc wf-options->
-  ^WorkflowOptions [params]
-  (u/build (WorkflowOptions/newBuilder (WorkflowOptions/getDefaultInstance)) wf-option-spec params))
+   (let [service (g/service-stub-> options timeout)]
+     (WorkflowClient/newInstance service (copts/client-options-> options)))))
 
 (defn create-workflow
   "
@@ -147,7 +78,7 @@ Create a new workflow-stub instance, suitable for managing and interacting with 
      {:client client :stub stub}))
   ([^WorkflowClient client workflow options]
    (let [wf-name (w/get-annotated-name workflow)
-         options (wf-options-> options)
+         options (w/wf-options-> options)
          stub    (.newUntypedWorkflowStub client wf-name options)]
      (log/trace "create-workflow:" wf-name options)
      {:client client :stub stub})))
