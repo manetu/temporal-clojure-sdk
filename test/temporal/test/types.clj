@@ -5,8 +5,7 @@
             [temporal.client.worker :as worker]
             [temporal.client.options :as o]
             [temporal.internal.workflow :as w]
-            [temporal.internal.schedule :as s]
-            [temporal.internal.grpc :as g])
+            [temporal.internal.schedule :as s])
   (:import [java.time Duration Instant]
            [io.grpc Grpc InsecureChannelCredentials Metadata]
            [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
@@ -27,7 +26,7 @@
 
 (deftest client-options
   (testing "Verify that our stub options work"
-    (let [x (g/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
+    (let [x (o/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
                                :ssl-context              (-> (GrpcSslContexts/forClient) (.build))
                                :target                   "foo:1234"
                                :enable-https             false
@@ -43,14 +42,14 @@
                                :keepalive-without-stream true})]
       (is (-> x (.getTarget) (= "foo:1234")))))
   (testing "Verify that our client options work"
-    (let [x (o/client-options-> {:identity "test"
+    (let [x (o/workflow-client-options-> {:identity "test"
                                  :namespace "test"})]
       (is (-> x (.getIdentity) (= "test")))
       (is (-> x (.getNamespace) (= "test")))))
   (testing "Verify that mixed client/stub options work"
     (let [options {:target "foo:1234" :namespace "default"}]
-      (is (some? (g/stub-options-> options)))
-      (is (some? (o/client-options-> options))))))
+      (is (some? (o/stub-options-> options)))
+      (is (some? (o/workflow-client-options-> options))))))
 
 (deftest worker-options
   (testing "Verify that our worker-options work"
@@ -69,7 +68,7 @@
 
 (deftest schedule-client-options
   (testing "Verify that our stub options work"
-    (let [x (g/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
+    (let [x (o/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
                                :ssl-context              (-> (GrpcSslContexts/forClient) (.build))
                                :target                   "foo:1234"
                                :enable-https             false
@@ -91,7 +90,7 @@
       (is (-> x (.getNamespace) (= "test")))))
   (testing "Verify that mixed client/stub options work"
     (let [options {:target "foo:1234" :namespace "default"}]
-      (is (some? (g/stub-options-> options)))
+      (is (some? (o/stub-options-> options)))
       (is (some? (o/schedule-client-options-> options))))))
 
 (deftest schedule-options
