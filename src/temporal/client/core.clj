@@ -7,7 +7,6 @@
             [promesa.core :as p]
             [temporal.client.options :as copts]
             [temporal.internal.workflow :as w]
-            [temporal.internal.grpc :as g]
             [temporal.internal.utils :as u]
             [temporal.internal.exceptions :as e])
   (:import [java.time Duration]
@@ -20,41 +19,16 @@ workflow clients (See [[create-workflow]]).
 
 Arguments:
 
-- `options`: Client configuration option map (See below)
+- `options`: Options for configuring the `WorkflowClient` (See [[temporal.client.options/workflow-client-options]] and [[temporal.client.options/stub-options]])
 - `timeout`: Connection timeout as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) (default: 5s)
-
-#### options map
-
-
-| Value                     | Description                                                                 | Type         | Default |
-| ------------------------- | --------------------------------------------------------------------------- | ------------ | ------- |
-| :target                   | Sets the connection host:port                                               | String       | \"127.0.0.1:7233\" |
-| :identity                 | Overrides the worker node identity (workers only)                           | String       | |
-| :namespace                | Sets the Temporal namespace context for this client                         | String       | |
-| :data-converter           | Overrides the data converter used to serialize arguments and results.       | [DataConverter](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DataConverter.html) | |
-| :interceptors             | Collection of interceptors used to intercept workflow client calls.         | [WorkflowClientInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/WorkflowClientInterceptor.html) | |
-| :channel                  | Sets gRPC channel to use. Exclusive with target and sslContext              | [ManagedChannel](https://grpc.github.io/grpc-java/javadoc/io/grpc/ManagedChannel.html) | |
-| :ssl-context              | Sets gRPC SSL Context to use (See [[temporal.tls/new-ssl-context]])         | [SslContext](https://netty.io/4.0/api/io/netty/handler/ssl/SslContext.html) | |
-| :enable-https             | Sets option to enable SSL/TLS/HTTPS for gRPC                                | boolean      | false |
-| :rpc-timeout              | Sets the rpc timeout value for non query and non long poll calls            | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
-| :rpc-long-poll-timeout    | Sets the rpc timeout value                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 60s |
-| :rpc-query-timeout        | Sets the rpc timeout for queries                                            | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
-| :backoff-reset-freq       | Sets frequency at which gRPC connection backoff should be reset practically | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
-| :grpc-reconnect-freq      | Sets frequency at which gRPC channel will be moved into an idle state       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 60s |
-| :headers                  | Set the headers                                                             | [Metadata](https://grpc.github.io/grpc-java/javadoc/io/grpc/Metadata.html) | |
-| :enable-keepalive         | Set keep alive ping from client to the server                               | boolean       | false |
-| :keepalive-time           | Set the keep alive time                                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :keepalive-timeout        | Set the keep alive timeout                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :keepalive-without-stream | Set if client sends keepalive pings even with no active RPCs                | boolean       | false |
-| :metrics-scope            | The scope to be used for metrics reporting                                  | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
 
 "
   ([] (create-client {}))
   ([options]
    (create-client options (Duration/ofSeconds 5)))
   ([options timeout]
-   (let [service (g/service-stub-> options timeout)]
-     (WorkflowClient/newInstance service (copts/client-options-> options)))))
+   (let [service (copts/service-stub-> options timeout)]
+     (WorkflowClient/newInstance service (copts/workflow-client-options-> options)))))
 
 (defn create-workflow
   "
