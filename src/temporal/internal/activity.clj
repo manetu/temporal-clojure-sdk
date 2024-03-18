@@ -11,6 +11,7 @@
             [temporal.internal.exceptions :as e]
             [temporal.common :as common])
   (:import [java.time Duration]
+           [io.temporal.internal.sync DestroyWorkflowThreadError]
            [io.temporal.activity Activity ActivityInfo DynamicActivity ActivityCancellationType]
            [io.temporal.activity ActivityOptions ActivityOptions$Builder LocalActivityOptions LocalActivityOptions$Builder]
            [clojure.core.async.impl.channels ManyToManyChannel]))
@@ -107,6 +108,9 @@
     (log/trace activity-id "calling" f "with args:" a)
     (try+
      (result-> activity-id (f ctx a))
+     (catch DestroyWorkflowThreadError ex
+       (log/debug activity-id "thread evicted")
+       (throw ex))
      (catch Object o
        (log/error &throw-context)
        (e/forward &throw-context)))))

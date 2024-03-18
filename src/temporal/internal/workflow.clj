@@ -12,6 +12,7 @@
             [temporal.internal.utils :as u])
   (:import [io.temporal.api.enums.v1 WorkflowIdReusePolicy]
            [io.temporal.client WorkflowOptions WorkflowOptions$Builder]
+           [io.temporal.internal.sync DestroyWorkflowThreadError]
            [io.temporal.workflow Workflow WorkflowInfo]))
 
 (extend-protocol p/Datafiable
@@ -75,17 +76,20 @@
 
 (defn execute
   [ctx dispatch args]
-  (try+
-   (let [{:keys [workflow-type workflow-id]} (get-info)
-         d (u/find-dispatch dispatch workflow-type)
-         f (:fn d)
-         a (u/->args args)
-         _ (log/trace workflow-id "calling" f "with args:" a)
-         r (if (-> d :type (= :legacy))
-             (f ctx {:args a :signals (s/create-signal-chan)})
-             (f a))]
-     (log/trace workflow-id "result:" r)
-     (nippy/freeze r))
-   (catch Object o
-     (log/error &throw-context)
-     (e/forward &throw-context))))
+  (let [{:keys [workflow-type workflow-id]} (get-info)]
+    (try+
+     (let [d (u/find-dispatch dispatch workflow-type)
+           f (:fn d)
+           a (u/->args args)
+           _ (log/trace workflow-id "calling" f "with args:" a)
+           r (if (-> d :type (= :legacy))
+               (f ctx {:args a :signals (s/create-signal-chan)})
+               (f a))]
+       (log/trace workflow-id "result:" r)
+       (nippy/freeze r))
+     (catch DestroyWorkflowThreadError ex
+       (log/debug workflow-id "thread evicted")
+       (throw ex))
+     (catch Object o
+       (log/error &throw-context)
+       (e/forward &throw-context)))))
