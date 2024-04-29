@@ -56,7 +56,7 @@
 (def schedule-action-start-workflow-spec->
   {:options               #(.setOptions ^ScheduleActionStartWorkflow$Builder %1 (w/wf-options-> %2))
    :arguments             (fn [^ScheduleActionStartWorkflow$Builder builder value]
-                            (.setArguments builder (to-array [(stringify-keys value)])))
+                            (.setArguments builder (u/->objarray value)))
    :workflow-type         (fn [^ScheduleActionStartWorkflow$Builder builder value]
                             (if (string? value)
                               (.setWorkflowType builder ^String value)
