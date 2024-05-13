@@ -35,23 +35,34 @@
       (is (-> workflow c/get-result deref count (= 10))))))
 
 (defactivity all-settled-activity
-  [ctx args] args)
+  [ctx args]
+  (log/tracef "calling all-settled-activity %d" args)
+  args)
+
+(defn invoke-settled [x]
+  (a/invoke all-settled-activity x))
 
 (defworkflow all-settled-workflow
   [args]
-  @(-> (pt/all (map #(a/invoke all-settled-activity %) (range 10)))
+  (log/trace "calling all-settled-workflow")
+  @(-> (pt/all-settled (map invoke-settled (range 10)))
        (p/then (fn [r] r))
        (p/catch (fn [e] (:args (ex-data e))))))
 
 (defactivity error-prone-activity
   [ctx args]
+  (log/tracef "calling error-prone-activity %d" args)
   (when (= args 5)
     (throw (ex-info "error on 5" {:args args})))
   args)
 
+(defn invoke-error [x]
+  (a/invoke error-prone-activity x))
+
 (defworkflow error-prone-workflow
   [args]
-  @(-> (pt/all (map #(a/invoke error-prone-activity %) (range 10)))
+  (log/trace "calling error-prone-workflow")
+  @(-> (pt/all-settled (map invoke-error (range 10)))
        (p/then (fn [r] r))
        (p/catch (fn [e] (:args (ex-data e))))))
 
@@ -62,7 +73,7 @@
       (c/start workflow {})
       (is (-> workflow c/get-result deref count (= 10)))))
   (testing "Testing that all-settled waits for all the activities to complete
-            despite error and can return the errors"
+              just like `p/all` and can still propogate errors"
     (let [workflow (t/create-workflow error-prone-workflow)]
       (c/start workflow {})
       (is (-> workflow c/get-result deref (= 5))))))
