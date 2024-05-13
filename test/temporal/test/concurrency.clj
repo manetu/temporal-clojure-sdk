@@ -56,12 +56,12 @@
        (p/catch (fn [e] (:args (ex-data e))))))
 
 (deftest test-all-settled
-  (testing "Testing that allSettled waits for all the activities to complete
+  (testing "Testing that all-settled waits for all the activities to complete
             just like `p/all` does in spite of errors"
     (let [workflow (t/create-workflow all-settled-workflow)]
       (c/start workflow {})
       (is (-> workflow c/get-result deref count (= 10)))))
-  (testing "Testing that allSettled waits for all the activities to complete
+  (testing "Testing that all-settled waits for all the activities to complete
             despite error and can return the errors"
     (let [workflow (t/create-workflow error-prone-workflow)]
       (c/start workflow {})
