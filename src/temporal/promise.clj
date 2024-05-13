@@ -31,9 +31,9 @@ promises returned from [[temporal.activity/invoke]] from within workflow context
                 (mapv deref coll)))))
 
 (defn all-settled
-  "Returns Promise that becomes completed when all arguments are completed, even in the face of errors.
+  "Returns a Promise that becomes completed/failed when all the arguments are done/settled, even in the face of errors.
 
-*N.B. You must handle the exceptions in the returned promises when done*
+*N.B. You must handle the exceptions in the returned promise with promesa*
 
 Similar to [promesa/all](https://funcool.github.io/promesa/latest/promesa.core.html#var-all) but designed to work with
 promises returned from [[temporal.activity/invoke]] from within workflow context.
