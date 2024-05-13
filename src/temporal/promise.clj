@@ -30,7 +30,7 @@ promises returned from [[temporal.activity/invoke]] from within workflow context
       (p/then (fn [_]
                 (mapv deref coll)))))
 
-(defn allSettled
+(defn all-settled
   "Returns Promise that becomes completed when all arguments are completed, even in the face of errors.
 
 *N.B. You must handle the exceptions in the returned promises when done*
@@ -42,7 +42,7 @@ For more Java SDK samples example look here:
    https://github.com/temporalio/samples-java/tree/main/core/src/main/java/io/temporal/samples/batch
 
 ```clojure
-(-> (allSettled [(a/invoke activity-a ..) (a/invoke activity-b ..)])
+(-> (all-settled [(a/invoke activity-a ..) (a/invoke activity-b ..)])
     (promesa.core/then (fn [[a-result b-result]] ...)))
 ```
 "
