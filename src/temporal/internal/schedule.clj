@@ -1,6 +1,5 @@
 (ns ^:no-doc temporal.internal.schedule
-  (:require [clojure.walk :refer [stringify-keys]]
-            [temporal.internal.utils :as u]
+  (:require [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.api.enums.v1 ScheduleOverlapPolicy]
            [io.temporal.client.schedules

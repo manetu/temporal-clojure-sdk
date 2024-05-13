@@ -50,7 +50,7 @@
    ```"
   [^ScheduleClient client schedule-id options]
   (let [schedule (s/schedule-> options)
-        schedule-options (s/schedule-options-> options)]
+        schedule-options (s/schedule-options-> (:schedule options))]
     (log/tracef "create schedule:" schedule-id)
     (.createSchedule client schedule-id schedule schedule-options)))
 
