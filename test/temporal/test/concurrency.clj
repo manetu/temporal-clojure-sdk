@@ -33,3 +33,36 @@
     (let [workflow (t/create-workflow concurrency-workflow)]
       (c/start workflow {})
       (is (-> workflow c/get-result deref count (= 10))))))
+
+(defactivity all-settled-activity
+  [ctx args] args)
+
+(defworkflow all-settled-workflow
+  [args]
+  @(-> (pt/all (map #(a/invoke all-settled-activity %) (range 10)))
+       (p/then (fn [r] r))
+       (p/catch (fn [e] (:args (ex-data e))))))
+
+(defactivity error-prone-activity
+  [ctx args]
+  (when (= args 5)
+    (throw (ex-info "error on 5" {:args args})))
+  args)
+
+(defworkflow error-prone-workflow
+  [args]
+  @(-> (pt/all (map #(a/invoke error-prone-activity %) (range 10)))
+       (p/then (fn [r] r))
+       (p/catch (fn [e] (:args (ex-data e))))))
+
+(deftest test-all-settled
+  (testing "Testing that allSettled waits for all the activities to complete
+            just like `p/all` does in spite of errors"
+    (let [workflow (t/create-workflow all-settled-workflow)]
+      (c/start workflow {})
+      (is (-> workflow c/get-result deref count (= 10)))))
+  (testing "Testing that allSettled waits for all the activities to complete
+            despite error and can return the errors"
+    (let [workflow (t/create-workflow error-prone-workflow)]
+      (c/start workflow {})
+      (is (-> workflow c/get-result deref (= 5))))))

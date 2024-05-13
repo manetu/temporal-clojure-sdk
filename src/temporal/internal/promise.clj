@@ -1,8 +1,7 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns ^:no-doc temporal.internal.promise
-  (:require [taoensso.timbre :as log]
-            [promesa.protocols :as pt]
+  (:require [promesa.protocols :as pt]
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
