@@ -73,7 +73,7 @@
       (c/start workflow {})
       (is (-> workflow c/get-result deref count (= 10)))))
   (testing "Testing that all-settled waits for all the activities to complete
-              just like `p/all` and can still propogate errors"
+                just like `p/all` and can still propogate errors"
     (let [workflow (t/create-workflow error-prone-workflow)]
       (c/start workflow {})
       (is (-> workflow c/get-result deref (= 5))))))
