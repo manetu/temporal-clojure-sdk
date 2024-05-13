@@ -47,7 +47,7 @@ For more Java SDK samples example look here:
 ```
 "
   [coll]
-  (letfn [(wait! [^Promise p] (try (.get p) ( catch Exception _)))]
+  (letfn [(wait! [^Promise p] (try (.get p) (catch Exception _)))]
     (-> (into-array Promise (mapv wait! (->array coll)))
         (Promise/allOf)
         (pt/->PromiseAdapter)
