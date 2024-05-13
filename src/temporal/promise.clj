@@ -47,13 +47,14 @@ For more Java SDK samples example look here:
 ```
 "
   [coll]
-  (letfn [(wait! [^Promise p] (try (.get p) (catch Exception _)))]
-    (-> (into-array Promise (mapv wait! (->array coll)))
-        (Promise/allOf)
-        (pt/->PromiseAdapter)
-        ;; The promises are all completed at this point,
-        ;; this is just to use the promesa library
-        (p/then (fn [_] (mapv deref coll))))))
+  (letfn [(wait! [^Promise p] (try (.get p) p (catch Exception _ p)))]
+    (->
+     (into-array Promise (mapv wait! (->array coll)))
+     (Promise/allOf)
+     (pt/->PromiseAdapter)
+       ;; The promises are all completed at this point,
+       ;; this is just to use the promesa library
+     (p/then (fn [_] (mapv deref coll))))))
 
 (defn race
   "Returns Promise that becomes completed when any of the arguments are completed.
