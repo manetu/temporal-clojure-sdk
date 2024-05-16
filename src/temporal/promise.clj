@@ -30,6 +30,34 @@ promises returned from [[temporal.activity/invoke]] from within workflow context
       (p/then (fn [_]
                 (mapv deref coll)))))
 
+(defn all-settled
+  "Returns a Promise that becomes completed/failed when all the arguments are done/settled, even in the face of errors.
+
+*N.B. You must handle the exceptions in the returned promise with promesa*
+
+Similar to [promesa/all](https://funcool.github.io/promesa/latest/promesa.core.html#var-all) but designed to work with
+promises returned from [[temporal.activity/invoke]] from within workflow context.
+
+For more Java SDK samples example look here:
+   https://github.com/temporalio/samples-java/tree/main/core/src/main/java/io/temporal/samples/batch
+
+```clojure
+(-> (all-settled [(a/invoke activity-a ..) (a/invoke activity-b ..)])
+    (promesa.core/then (fn [[a-result b-result]] ...)))
+```
+"
+  [coll]
+  (letfn [(wait! [^Promise p] (try (.get p) (catch Exception _)))]
+    ;; So we do not have to duplicate this, make the only copy here
+    (let [promises (->array coll)]
+      (run! wait! promises)
+      (->
+       (Promise/allOf promises)
+       (pt/->PromiseAdapter)
+       ;; The promises are all completed at this point,
+       ;; this is just to use the promesa library
+       (p/then (fn [_] (mapv deref coll)))))))
+
 (defn race
   "Returns Promise that becomes completed when any of the arguments are completed.
 

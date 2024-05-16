@@ -2,7 +2,7 @@
 
 (ns temporal.test.async
   (:require [clojure.core.async :refer [go]]
-            [clojure.test :refer :all]
+            [clojure.test :refer [deftest testing is use-fixtures]]
             [taoensso.timbre :as log]
             [temporal.activity :refer [defactivity] :as a]
             [temporal.client.core :as c]

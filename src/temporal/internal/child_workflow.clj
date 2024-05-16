@@ -6,13 +6,15 @@
            [io.temporal.api.enums.v1 ParentClosePolicy]
            [io.temporal.workflow ChildWorkflowOptions ChildWorkflowOptions$Builder ChildWorkflowCancellationType]))
 
+(set! *warn-on-reflection* true)
+
 (def cancellation-type->
   {:abandon                     ChildWorkflowCancellationType/ABANDON
    :try-cancel                  ChildWorkflowCancellationType/TRY_CANCEL
    :wait-cancellation-completed ChildWorkflowCancellationType/WAIT_CANCELLATION_COMPLETED
    :wait-cancellation-requested ChildWorkflowCancellationType/WAIT_CANCELLATION_REQUESTED})
 
-(def workflow-parent-close-policy->
+(def parent-close-policy->
   {:abandon ParentClosePolicy/PARENT_CLOSE_POLICY_ABANDON
    :request-cancel ParentClosePolicy/PARENT_CLOSE_POLICY_REQUEST_CANCEL
    :terminate ParentClosePolicy/PARENT_CLOSE_POLICY_TERMINATE})
@@ -21,7 +23,7 @@
   {:task-queue                 #(.setTaskQueue ^ChildWorkflowOptions$Builder %1 (u/namify %2))
    :workflow-id                #(.setWorkflowId ^ChildWorkflowOptions$Builder %1 (u/namify %2))
    :workflow-id-reuse-policy   #(.setWorkflowIdReusePolicy ^ChildWorkflowOptions$Builder %1 (w/workflow-id-reuse-policy-> %2))
-   :parent-close-policy        #(.setParentClosePolicy ^ChildWorkflowOptions$Builder %1 (workflow-parent-close-policy-> %2))
+   :parent-close-policy        #(.setParentClosePolicy ^ChildWorkflowOptions$Builder %1 (parent-close-policy-> %2))
    :workflow-execution-timeout #(.setWorkflowExecutionTimeout ^ChildWorkflowOptions$Builder %1 %2)
    :workflow-run-timeout       #(.setWorkflowRunTimeout ^ChildWorkflowOptions$Builder %1 %2)
    :workflow-task-timeout      #(.setWorkflowTaskTimeout ^ChildWorkflowOptions$Builder %1 %2)
@@ -32,11 +34,13 @@
    :search-attributes          #(.setSearchAttributes ^ChildWorkflowOptions$Builder %1 %2)})
 
 (defn import-child-workflow-options
-  [{:keys [workflow-run-timeout workflow-execution-timeout] :as params}]
-  (cond-> params
+  [{:keys [workflow-run-timeout workflow-execution-timeout] :as options}]
+  (cond-> options
     (every? nil? [workflow-run-timeout workflow-execution-timeout])
     (assoc :workflow-execution-timeout (Duration/ofSeconds 10))))
 
 (defn child-workflow-options->
-  ^ChildWorkflowOptions [params]
-  (u/build (ChildWorkflowOptions/newBuilder) child-workflow-option-spec (import-child-workflow-options params)))
+  ^ChildWorkflowOptions [options]
+  (println "HERE")
+  (clojure.pprint/pprint options)
+  (u/build (ChildWorkflowOptions/newBuilder) child-workflow-option-spec (import-child-workflow-options options)))

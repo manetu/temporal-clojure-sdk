@@ -5,7 +5,8 @@
             [temporal.client.worker :as worker]
             [temporal.client.options :as o]
             [temporal.internal.workflow :as w]
-            [temporal.internal.schedule :as s])
+            [temporal.internal.schedule :as s]
+            [temporal.internal.child-workflow :as cw])
   (:import [java.time Duration Instant]
            [io.grpc Grpc InsecureChannelCredentials Metadata]
            [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
@@ -125,3 +126,34 @@
       (is (-> schedule .getPolicy .isPauseOnFailure))
       (is (= "note" (-> schedule .getState .getNote)))
       (is (-> schedule .getState .isPaused)))))
+
+(deftest child-workflow-options
+  (testing "Verify that a `ChildWorkflowOptions` instance can be built properly"
+    (let [options {:workflow-id "foo"
+                   :task-queue "bar"
+                   :workflow-execution-timeout (Duration/ofSeconds 1)
+                   :workflow-run-timeout (Duration/ofSeconds 2)
+                   :workflow-task-timeout (Duration/ofSeconds 3)
+                   :retry-options {:maximum-attempts 1}
+                   :cron-schedule "* * * * *"
+                   :memo {"foo" "bar"}
+                   :search-attributes {"foo" "bar"}
+                   :workflow-id-reuse-policy :terminate-if-running
+                   :parent-close-policy :terminate
+                   :cancellation-type :abandon}
+          child-workflow-options (cw/child-workflow-options-> options)]
+      (is (some? child-workflow-options))
+      (is (= "foo" (-> child-workflow-options .getWorkflowId )))
+      (is (= "bar" (-> child-workflow-options .getTaskQueue)))
+      (is (= (Duration/ofSeconds 1) (-> child-workflow-options .getWorkflowExecutionTimeout)))
+      (is (= (Duration/ofSeconds 2) (-> child-workflow-options .getWorkflowRunTimeout)))
+      (is (= (Duration/ofSeconds 3) (-> child-workflow-options .getWorkflowTaskTimeout)))
+      (is (= 1 (-> child-workflow-options .getRetryOptions .getMaximumAttempts)))
+      (is (= "* * * * *"  (-> child-workflow-options .getCronSchedule)))
+      (is (= {"foo" "bar"}  (-> child-workflow-options .getMemo)))
+      (is (= io.temporal.api.enums.v1.WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+             (-> child-workflow-options .getWorkflowIdReusePolicy)))
+      (is (= io.temporal.api.enums.v1.ParentClosePolicy/PARENT_CLOSE_POLICY_TERMINATE
+             (-> child-workflow-options .getParentClosePolicy)))
+      (is (= io.temporal.workflow.ChildWorkflowCancellationType/ABANDON
+             (-> child-workflow-options .getCancellationType))))))
