@@ -128,14 +128,45 @@ Arguments:
 
 #### options map
 
-| Value                      | Description                                                                                | Type         | Default |
-| -------------------------  | ------------------------------------------------------------------------------------------ | ------------ | ------- |
-| :cancellation-type         | Defines the activity's stub cancellation mode.                                             | See `cancellation types` below | :try-cancel |
-| :heartbeat-timeout         | Heartbeat interval.                                                                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :retry-options             | Define how activity is retried in case of failure.                                         | [[temporal.common/retry-options]] | |
-| :start-to-close-timeout    | Maximum time of a single Activity execution attempt.                                       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 3 seconds |
-| :schedule-to-close-timeout | Total time that a workflow is willing to wait for Activity to complete.                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :schedule-to-start-timeout | Time that the Activity Task can stay in the Task Queue before it is picked up by a Worker. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| Value                       | Description                                                                                | Type         | Default |
+| --------------------------- | ------------------------------------------------------------------------------------------ | ------------ | ------- |
+| :task-queue                 | Task queue to use for child workflow tasks                                                 | String | |
+| :workflow-id                | Workflow id to use when starting                                                           | String | |
+| :workflow-id-reuse-policy   | Specifies server behavior if a completed workflow with the same id exists                  | See `workflow id reuse policy types` below | |
+| :parent-close-policy        | Specifies how this workflow reacts to the death of the parent workflow                     | See `parent close policy types` below | |
+| :workflow-execution-timeout | The time after which child workflow execution is automatically terminated                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10 seconds |
+| :workflow-run-timeout       | The time after which child workflow run is automatically terminated                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout      | Maximum execution time of a single workflow task                                           | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options              | RetryOptions that define how child workflow is retried in case of failure                  | [[temporal.common/retry-options]] | |
+| :cron-schedule              | A cron schedule string                                                                     | String | |
+| :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
+| :memo                       | Specifies additional non-indexed information in result of list workflow                    | String | |
+
+#### cancellation types
+
+| Value                        | Description                                                                 |
+| -------------------------    | --------------------------------------------------------------------------- |
+| :try-cancel                  | Initiate a cancellation request and immediately report cancellation to the parent |
+| :abandon                     | Do not request cancellation of the child workflow |
+| :wait-cancellation-completed | Wait for child cancellation completion |
+| :wait-cancellation-requested | Request cancellation of the child and wait for confirmation that the request was received |
+
+#### parent close policy types
+
+| Value                        | Description                                                                 |
+| -------------------------    | --------------------------------------------------------------------------- |
+| :abandon                     | Do not request cancellation of the child workflow |
+| :request-cancel              | Request cancellation of the child and wait for confirmation that the request was received |
+| :terminate                   | Terminate the child workflow |
+
+#### workflow id reuse policy types
+
+| Value                        | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| :allow-duplicate             | Allow starting a child workflow execution using the same workflow id. |
+| :allow-duplicate-failed-only | Allow starting a child workflow execution using the same workflow id, only when the last execution's final state is one of [terminated, cancelled, timed out, failed] |
+| :reject-duplicate            | Do not permit re-use of the child workflow id for this workflow. |
+| :terminate-if-running        | If a workflow is running using the same child workflow ID, terminate it and start a new one. If no running child workflow, then the behavior is the same as ALLOW_DUPLICATE |
 
 ```clojure
 (defworkflow my-workflow

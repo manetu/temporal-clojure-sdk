@@ -24,7 +24,7 @@
   (log/info "greeter-workflow:" args)
   @(a/invoke async-greet-activity args {:retry-options {:maximum-attempts 1}}))
 
-(deftest the-test
+(deftest basic-async-test
   (testing "Verifies that we can round-trip with an async task"
     (let [workflow (t/create-workflow async-greeter-workflow)]
       (c/start workflow {:name "Bob"})

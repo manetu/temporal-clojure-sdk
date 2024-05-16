@@ -28,8 +28,7 @@
    :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
    :cron-schedule              #(.setCronSchedule ^ChildWorkflowOptions$Builder %1 %2)
    :cancellation-type          #(.setCancellationType ^ChildWorkflowOptions$Builder %1 (cancellation-type-> %2))
-   :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)
-   :search-attributes          #(.setSearchAttributes ^ChildWorkflowOptions$Builder %1 %2)})
+   :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)})
 
 (defn import-child-workflow-options
   [{:keys [workflow-run-timeout workflow-execution-timeout] :as options}]
@@ -39,6 +38,4 @@
 
 (defn child-workflow-options->
   ^ChildWorkflowOptions [options]
-  (println "HERE")
-  (clojure.pprint/pprint options)
   (u/build (ChildWorkflowOptions/newBuilder) child-workflow-option-spec (import-child-workflow-options options)))

@@ -137,7 +137,6 @@
                    :retry-options {:maximum-attempts 1}
                    :cron-schedule "* * * * *"
                    :memo {"foo" "bar"}
-                   :search-attributes {"foo" "bar"}
                    :workflow-id-reuse-policy :terminate-if-running
                    :parent-close-policy :terminate
                    :cancellation-type :abandon}
