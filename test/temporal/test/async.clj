@@ -1,8 +1,8 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.test.async
-  (:require [clojure.core.async :refer [go]]
-            [clojure.test :refer [deftest testing is use-fixtures]]
+  (:require [clojure.test :refer [deftest testing is use-fixtures]]
+            [clojure.core.async :refer [go]]
             [taoensso.timbre :as log]
             [temporal.activity :refer [defactivity] :as a]
             [temporal.client.core :as c]
@@ -16,7 +16,7 @@
   (go
     (log/info "greet-activity:" args)
     (if (= name "Charlie")
-      (ex-info "permission-denied" {})
+      (ex-info "permission-denied" {})                      ;; we don't like Charlie
       (str "Hi, " name))))
 
 (defworkflow async-greeter-workflow

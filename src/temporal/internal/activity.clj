@@ -4,7 +4,7 @@
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
             [clojure.core.async :refer [go <!] :as async]
-            [slingshot.slingshot :refer [try+]]
+            [slingshot.slingshot :refer [try+ throw+]]
             [taoensso.timbre :as log]
             [taoensso.nippy :as nippy]
             [temporal.internal.utils :as u]
@@ -102,7 +102,7 @@
 
 (defn- -execute
   [ctx dispatch args]
-  (let [{:keys [activity-type activity-id] :as _info} (get-info)
+  (let [{:keys [activity-type activity-id] :as info} (get-info)
         f (u/find-dispatch-fn dispatch activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
