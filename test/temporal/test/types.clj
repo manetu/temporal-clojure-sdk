@@ -142,7 +142,7 @@
                    :cancellation-type :abandon}
           child-workflow-options (cw/child-workflow-options-> options)]
       (is (some? child-workflow-options))
-      (is (= "foo" (-> child-workflow-options .getWorkflowId )))
+      (is (= "foo" (-> child-workflow-options .getWorkflowId)))
       (is (= "bar" (-> child-workflow-options .getTaskQueue)))
       (is (= (Duration/ofSeconds 1) (-> child-workflow-options .getWorkflowExecutionTimeout)))
       (is (= (Duration/ofSeconds 2) (-> child-workflow-options .getWorkflowRunTimeout)))
