@@ -118,6 +118,13 @@
    (fn [x]
      (str (symbol x)))))
 
+(defn complete-invoke
+  [stub result]
+  (log/trace stub "completed with" (count result) "bytes")
+  (let [r (nippy/thaw result)]
+    (log/trace stub "results:" r)
+    r))
+
 (defn ->Func
   [f]
   (reify

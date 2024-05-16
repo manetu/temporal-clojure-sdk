@@ -47,13 +47,6 @@ along with the Activity Task for the next retry attempt and can be extracted by 
   []
   (a/get-info))
 
-(defn- complete-invoke
-  [activity result]
-  (log/trace activity "completed with" (count result) "bytes")
-  (let [r (nippy/thaw result)]
-    (log/trace activity "results:" r)
-    r))
-
 (defn invoke
   "
 Invokes 'activity' with 'params' from within a workflow context.  Returns a promise that when derefed will resolve to
@@ -98,7 +91,7 @@ Arguments:
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
      (log/trace "invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
-         (p/then (partial complete-invoke activity))
+         (p/then (partial u/complete-invoke activity))
          (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]
                     (log/error e)
@@ -139,7 +132,7 @@ Arguments:
          stub (Workflow/newUntypedLocalActivityStub (a/local-invoke-options-> options))]
      (log/trace "local-invoke:" activity "with" params options)
      (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
-         (p/then (partial complete-invoke activity))
+         (p/then (partial u/complete-invoke activity))
          (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]
                     (log/error e)

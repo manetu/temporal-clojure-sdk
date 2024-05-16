@@ -5,8 +5,11 @@
   (:require
    [taoensso.nippy :as nippy]
    [taoensso.timbre :as log]
+   [promesa.core :as p]
+   [temporal.internal.exceptions :as e]
    [temporal.internal.utils :as u]
-   [temporal.internal.workflow :as w])
+   [temporal.internal.workflow :as w]
+   [temporal.internal.child-workflow :as cw])
   (:import [io.temporal.workflow DynamicQueryHandler Workflow]
            [java.util.function Supplier]
            [java.time Duration]))
@@ -111,3 +114,45 @@ Arguments:
              (log/trace (str ~fqn ": ") args#)
              (let [f# (fn ~params* (do ~@body))]
                (f# args#))))))))
+
+(defn invoke
+  "
+Invokes a 'child workflow' with 'params' from within a workflow context.
+Returns a promise that when derefed will resolve to the evaluation of the defworkflow once the workflow concludes.
+
+Arguments:
+
+- `workflow`: A reference to a symbol registered with [[defworkflow]], called a Child Workflow usually.
+- `params`: Opaque serializable data that will be passed as arguments to the invoked child workflow
+- `options`: See below.
+
+#### options map
+
+| Value                      | Description                                                                                | Type         | Default |
+| -------------------------  | ------------------------------------------------------------------------------------------ | ------------ | ------- |
+| :cancellation-type         | Defines the activity's stub cancellation mode.                                             | See `cancellation types` below | :try-cancel |
+| :heartbeat-timeout         | Heartbeat interval.                                                                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options             | Define how activity is retried in case of failure.                                         | [[temporal.common/retry-options]] | |
+| :start-to-close-timeout    | Maximum time of a single Activity execution attempt.                                       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 3 seconds |
+| :schedule-to-close-timeout | Total time that a workflow is willing to wait for Activity to complete.                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :schedule-to-start-timeout | Time that the Activity Task can stay in the Task Queue before it is picked up by a Worker. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+
+```clojure
+(defworkflow my-workflow
+   [ctx {:keys [foo] :as args}]
+   ...)
+
+(invoke my-workflow {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
+```
+"
+  ([workflow params] (invoke workflow params {}))
+  ([workflow params options]
+   (let [wf-name (w/get-annotated-name workflow)
+         stub (Workflow/newUntypedChildWorkflowStub wf-name (cw/child-workflow-options-> options))]
+     (log/trace "invoke:" workflow "with" params options)
+     (-> (.executeAsync stub u/bytes-type (u/->objarray params))
+         (p/then (partial u/complete-invoke workflow))
+         (p/catch e/slingshot? e/recast-stone)
+         (p/catch (fn [e]
+                    (log/error e)
+                    (throw e)))))))
