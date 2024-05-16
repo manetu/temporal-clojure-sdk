@@ -1,6 +1,7 @@
 {:cljdoc.doc/tree
  [["Readme" {:file "README.md"}]
   ["Workflows" {:file "doc/workflows.md"}]
+  ["Child Workflows" {:file "doc/child_workflows.md"}]
   ["Activities" {:file "doc/activities.md"}]
   ["Workers" {:file "doc/workers.md"}]
   ["Clients" {:file "doc/clients.md"}]
