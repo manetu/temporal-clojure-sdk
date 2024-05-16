@@ -6,8 +6,6 @@
            [io.temporal.api.enums.v1 ParentClosePolicy]
            [io.temporal.workflow ChildWorkflowOptions ChildWorkflowOptions$Builder ChildWorkflowCancellationType]))
 
-(set! *warn-on-reflection* true)
-
 (def cancellation-type->
   {:abandon                     ChildWorkflowCancellationType/ABANDON
    :try-cancel                  ChildWorkflowCancellationType/TRY_CANCEL
