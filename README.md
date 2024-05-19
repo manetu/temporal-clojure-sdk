@@ -9,11 +9,9 @@ This Clojure SDK is a framework for authoring Workflows and Activities in Clojur
 
 ### Status
 
-**Alpha**
+**Stable**
 
-This SDK is battle-tested and used in production but is undergoing active development and is subject to breaking changes (*).  Some features such as Child-Workflows and Updates are currently missing.
-
-> (*) We will always bump at least the minor version when breaking changes are introduced and include a release note.
+This SDK is feature complete with a stable API and used in production.  Any future breaking changes will be managed by bumping at least the minor version and including a release note.
 
 ### Clojure SDK
 
