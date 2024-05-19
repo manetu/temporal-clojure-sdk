@@ -5,8 +5,11 @@
   (:require
    [taoensso.nippy :as nippy]
    [taoensso.timbre :as log]
+   [promesa.core :as p]
+   [temporal.internal.exceptions :as e]
    [temporal.internal.utils :as u]
-   [temporal.internal.workflow :as w])
+   [temporal.internal.workflow :as w]
+   [temporal.internal.child-workflow :as cw])
   (:import [io.temporal.workflow DynamicQueryHandler Workflow]
            [java.util.function Supplier]
            [java.time Duration]))
@@ -111,3 +114,76 @@ Arguments:
              (log/trace (str ~fqn ": ") args#)
              (let [f# (fn ~params* (do ~@body))]
                (f# args#))))))))
+
+(defn invoke
+  "
+Invokes a 'child workflow' with 'params' from within a workflow context.
+Returns a promise that when derefed will resolve to the evaluation of the defworkflow once the workflow concludes.
+
+Arguments:
+
+- `workflow`: A reference to a symbol registered with [[defworkflow]], called a Child Workflow usually.
+- `params`: Opaque serializable data that will be passed as arguments to the invoked child workflow
+- `options`: See below.
+
+#### options map
+
+| Value                       | Description                                                                                | Type         | Default |
+| --------------------------- | ------------------------------------------------------------------------------------------ | ------------ | ------- |
+| :task-queue                 | Task queue to use for child workflow tasks                                                 | String | |
+| :workflow-id                | Workflow id to use when starting                                                           | String | |
+| :workflow-id-reuse-policy   | Specifies server behavior if a completed workflow with the same id exists                  | See `workflow id reuse policy types` below | |
+| :parent-close-policy        | Specifies how this workflow reacts to the death of the parent workflow                     | See `parent close policy types` below | |
+| :workflow-execution-timeout | The time after which child workflow execution is automatically terminated                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10 seconds |
+| :workflow-run-timeout       | The time after which child workflow run is automatically terminated                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout      | Maximum execution time of a single workflow task                                           | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options              | RetryOptions that define how child workflow is retried in case of failure                  | [[temporal.common/retry-options]] | |
+| :cron-schedule              | A cron schedule string                                                                     | String | |
+| :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
+| :memo                       | Specifies additional non-indexed information in result of list workflow                    | String | |
+
+#### cancellation types
+
+| Value                        | Description                                                                 |
+| -------------------------    | --------------------------------------------------------------------------- |
+| :try-cancel                  | Initiate a cancellation request and immediately report cancellation to the parent |
+| :abandon                     | Do not request cancellation of the child workflow |
+| :wait-cancellation-completed | Wait for child cancellation completion |
+| :wait-cancellation-requested | Request cancellation of the child and wait for confirmation that the request was received |
+
+#### parent close policy types
+
+| Value                        | Description                                                                 |
+| -------------------------    | --------------------------------------------------------------------------- |
+| :abandon                     | Do not request cancellation of the child workflow |
+| :request-cancel              | Request cancellation of the child and wait for confirmation that the request was received |
+| :terminate                   | Terminate the child workflow |
+
+#### workflow id reuse policy types
+
+| Value                        | Description                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| :allow-duplicate             | Allow starting a child workflow execution using the same workflow id. |
+| :allow-duplicate-failed-only | Allow starting a child workflow execution using the same workflow id, only when the last execution's final state is one of [terminated, cancelled, timed out, failed] |
+| :reject-duplicate            | Do not permit re-use of the child workflow id for this workflow. |
+| :terminate-if-running        | If a workflow is running using the same child workflow ID, terminate it and start a new one. If no running child workflow, then the behavior is the same as ALLOW_DUPLICATE |
+
+```clojure
+(defworkflow my-workflow
+   [ctx {:keys [foo] :as args}]
+   ...)
+
+(invoke my-workflow {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
+```
+"
+  ([workflow params] (invoke workflow params {}))
+  ([workflow params options]
+   (let [wf-name (w/get-annotated-name workflow)
+         stub (Workflow/newUntypedChildWorkflowStub wf-name (cw/child-workflow-options-> options))]
+     (log/trace "invoke:" workflow "with" params options)
+     (-> (.executeAsync stub u/bytes-type (u/->objarray params))
+         (p/then (partial u/complete-invoke workflow))
+         (p/catch e/slingshot? e/recast-stone)
+         (p/catch (fn [e]
+                    (log/error e)
+                    (throw e)))))))
