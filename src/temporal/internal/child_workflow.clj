@@ -1,4 +1,4 @@
-(ns temporal.internal.child-workflow
+(ns ^:no-doc temporal.internal.child-workflow
   (:require [temporal.common :as common]
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
