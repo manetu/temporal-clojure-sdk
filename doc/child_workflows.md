@@ -8,7 +8,7 @@ Child Workflows orchestrate invocations of Activities just like Workflows do.
 
 Child Workflows should not be used for code organization, however they can be used to partition a Workflow execution's event history into smaller chunks which helps avoid the roughly *~50MB* Workflow event history limit, amongst other use cases.
 
-You should visit the [workflows](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/workflows) page to learn more about Workflows, their constraints, and their executions in general.
+You should visit the [workflows](./workflows.md) page to learn more about Workflows, their constraints, and their executions in general.
 
 For more information about Child Workflows in general visit [Temporal Child Workflows](https://docs.temporal.io/encyclopedia/child-workflows)
 
@@ -61,4 +61,3 @@ See [Temporal Parent Close Policy](https://docs.temporal.io/encyclopedia/child-w
                                   :workflow-execution-timeout 3600
                                   :workflow-run-timeout 3600}))
 ```
-
