@@ -22,7 +22,7 @@
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]]
   :repl-options {:init-ns user}
-  :java-source-paths ["src"]
+  :java-source-paths ["src" "resources"]
   :javac-options ["-target" "11" "-source" "11"]
 
   :eastwood {:add-linters [:unused-namespaces]}
