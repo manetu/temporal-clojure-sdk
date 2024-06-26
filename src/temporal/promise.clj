@@ -77,9 +77,9 @@ promises returned from [[temporal.activity/invoke]] from within workflow context
 (defn resolved
   "Returns a new, fully resolved promise"
   [value]
-  (Workflow/newPromise value))
+  (pt/->PromiseAdapter (Workflow/newPromise value)))
 
 (defn rejected
   "Returns a new, rejected promise"
   [^Exception e]
-  (Workflow/newFailedPromise e))
+  (pt/->PromiseAdapter (Workflow/newFailedPromise e)))
