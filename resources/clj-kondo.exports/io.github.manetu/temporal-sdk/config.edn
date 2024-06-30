@@ -1,0 +1,2 @@
+{:lint-as {temporal.workflow/defworkflow clojure.core/defn
+           temporal.activity/defactivity clojure.core/defn}}
