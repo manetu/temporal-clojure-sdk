@@ -25,16 +25,16 @@
   (log/info "greet-activity:" args)
   (str "Hi, " name))
 
-(defworkflow child-workflow
+(defworkflow user-child-workflow
   [{names :names :as args}]
   (log/info "child-workflow:" names)
   (for [name names]
     @(a/invoke greet-activity {:name name})))
 
-(defworkflow parent-workflow
+(defworkflow user-parent-workflow
   [args]
   (log/info "parent-workflow:" args)
-  @(w/invoke child-workflow args (merge default-workflow-options {:workflow-id "child-workflow"})))
+  @(w/invoke user-child-workflow args (merge default-workflow-options {:workflow-id "child-workflow"})))
 
 (defn create-temporal-client
   "Creates a new temporal client if the old one does not exist"
@@ -78,4 +78,4 @@
 (comment
   (do (create-temporal-client)
       (create-temporal-worker @client)
-      (execute-workflow @client parent-workflow {:names ["Hanna" "Bob" "Tracy" "Felix"]})))
+      (execute-workflow @client user-parent-workflow {:names ["Hanna" "Bob" "Tracy" "Felix"]})))
