@@ -109,7 +109,7 @@ Create and manage a schedule as follows
       schedule-id "my-schedule"
       client (s/create-client client-options)]
   (s/schedule client schedule-id {:schedule {:trigger-immediately? true
-                                             :memo "Created by John Doe"}
+                                             :memo {"Created by" "John Doe"}}
                                   :spec {:cron-expressions ["0 0 * * *"]
                                          :timezone "US/Central"}
                                   :policy {:pause-on-failure? false
