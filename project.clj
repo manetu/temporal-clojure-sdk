@@ -11,13 +11,13 @@
             [lein-cloverage "1.2.4"]
             [jonase/eastwood "1.3.0"]
             [lein-codox "0.10.8"]]
-  :dependencies [[org.clojure/clojure "1.11.3"]
+  :dependencies [[org.clojure/clojure "1.11.4"]
                  [org.clojure/core.async "1.6.681"]
-                 [io.temporal/temporal-sdk "1.23.2"]
-                 [io.temporal/temporal-testing "1.23.2"]
-                 [com.taoensso/encore "3.111.0"]
+                 [io.temporal/temporal-sdk "1.25.1"]
+                 [io.temporal/temporal-testing "1.25.1"]
+                 [com.taoensso/encore "3.117.0"]
                  [com.taoensso/timbre "6.5.0"]
-                 [com.taoensso/nippy "3.4.1"]
+                 [com.taoensso/nippy "3.4.2"]
                  [funcool/promesa "9.2.542"]
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]]
@@ -31,7 +31,7 @@
   :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.5.0"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
-                                    [io.temporal/temporal-opentracing "1.23.2"]]
+                                    [io.temporal/temporal-opentracing "1.25.1"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
