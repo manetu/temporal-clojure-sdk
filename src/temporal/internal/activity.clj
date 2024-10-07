@@ -40,16 +40,21 @@
   ^ActivityOptions [params]
   (u/build (ActivityOptions/newBuilder) invoke-option-spec (import-invoke-options params)))
 
+(defn- local-retry-options-> [{:keys [maximum-attempts] :or {maximum-attempts 0} :as options}]
+  (-> options
+      (cond-> (zero? maximum-attempts) (assoc :maximum-attempts Integer/MAX_VALUE)) ;; workaround for https://github.com/temporalio/sdk-java/issues/1727
+      (common/retry-options->)))
+
 (def local-invoke-option-spec
   {:start-to-close-timeout    #(.setStartToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
    :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
-   :retry-options             #(.setRetryOptions ^LocalActivityOptions$Builder %1 (common/retry-options-> %2))
+   :retry-options             #(.setRetryOptions ^LocalActivityOptions$Builder %1 (local-retry-options-> %2))
    :do-not-include-args       #(.setDoNotIncludeArgumentsIntoMarker ^LocalActivityOptions$Builder %1 %2)
    :local-retry-threshold     #(.setLocalRetryThreshold ^LocalActivityOptions$Builder %1 %2)})
 
 (defn local-invoke-options->
-  ^LocalActivityOptions [params]
-  (u/build (LocalActivityOptions/newBuilder (LocalActivityOptions/getDefaultInstance)) local-invoke-option-spec (import-invoke-options params)))
+  ^LocalActivityOptions [{:keys [retry-options] :or {retry-options {}} :as params}]
+  (u/build (LocalActivityOptions/newBuilder (LocalActivityOptions/getDefaultInstance)) local-invoke-option-spec (import-invoke-options (assoc params :retry-options retry-options))))
 
 (extend-protocol p/Datafiable
   ActivityInfo
