@@ -134,9 +134,9 @@ Arguments:
 | :workflow-id                | Workflow id to use when starting                                                           | String | |
 | :workflow-id-reuse-policy   | Specifies server behavior if a completed workflow with the same id exists                  | See `workflow id reuse policy types` below | |
 | :parent-close-policy        | Specifies how this workflow reacts to the death of the parent workflow                     | See `parent close policy types` below | |
-| :workflow-execution-timeout | The time after which child workflow execution is automatically terminated                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10 seconds |
+| :workflow-execution-timeout | The time after which child workflow execution is automatically terminated                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :workflow-run-timeout       | The time after which child workflow run is automatically terminated                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :workflow-task-timeout      | Maximum execution time of a single workflow task                                           | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout      | Maximum execution time of a single workflow task                                           | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10 seconds |
 | :retry-options              | RetryOptions that define how child workflow is retried in case of failure                  | [[temporal.common/retry-options]] | |
 | :cron-schedule              | A cron schedule string                                                                     | String | |
 | :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
