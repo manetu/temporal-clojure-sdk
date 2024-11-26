@@ -30,12 +30,6 @@
    :cancellation-type          #(.setCancellationType ^ChildWorkflowOptions$Builder %1 (cancellation-type-> %2))
    :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)})
 
-(defn import-child-workflow-options
-  [{:keys [workflow-run-timeout workflow-execution-timeout] :as options}]
-  (cond-> options
-    (every? nil? [workflow-run-timeout workflow-execution-timeout])
-    (assoc :workflow-execution-timeout (Duration/ofSeconds 10))))
-
 (defn child-workflow-options->
   ^ChildWorkflowOptions [options]
-  (u/build (ChildWorkflowOptions/newBuilder) child-workflow-option-spec (import-child-workflow-options options)))
+  (u/build (ChildWorkflowOptions/newBuilder) child-workflow-option-spec options))
