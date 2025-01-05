@@ -38,12 +38,14 @@ Options for configuring the worker-factory (See [[start]])
 | :max-workflow-thread-count                     | Maximum number of threads available for workflow execution across all workers created by the Factory. | int | 600 |
 | :worker-interceptors                           | Collection of WorkerInterceptors                                   | [WorkerInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/WorkerInterceptor.html) | |
 | :workflow-cache-size                           | To avoid constant replay of code the workflow objects are cached on a worker. This cache is shared by all workers created by the Factory. | int | 600 |
+| :using-virtual-workflow-threads                | Use Virtual Threads for all workflow threads across all workers created by this factory. This option is only supported for JDK >= 21. If set then :max-workflow-thread-count is ignored. | boolean | false       |
 "
 
   {:enable-logging-in-replay             #(.setEnableLoggingInReplay ^WorkerFactoryOptions$Builder %1 %2)
    :max-workflow-thread-count            #(.setMaxWorkflowThreadCount ^WorkerFactoryOptions$Builder %1 %2)
    :worker-interceptors                  #(.setWorkerInterceptors ^WorkerFactoryOptions$Builder %1 (into-array WorkerInterceptor %2))
-   :workflow-cache-size                  #(.setWorkflowCacheSize ^WorkerFactoryOptions$Builder %1 %2)})
+   :workflow-cache-size                  #(.setWorkflowCacheSize ^WorkerFactoryOptions$Builder %1 %2)
+   :using-virtual-workflow-threads       #(.setUsingVirtualWorkflowThreads ^WorkerFactoryOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-factory-options->
   ^WorkerFactoryOptions [params]
