@@ -7,14 +7,17 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/clojure:1.11.1
+      - image: cimg/openjdk:23.0.1
     steps:
       - checkout
       - run: |
-          lein version
-          lein cljfmt check
-          lein cloverage
-          lein jar
+          curl -sL https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ./lein
+          chmod +x ./lein
+
+          ./lein version
+          ./lein cljfmt check
+          ./lein cloverage
+          ./lein jar
 
 workflows:
   build-workflow:
