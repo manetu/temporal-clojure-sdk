@@ -2,16 +2,24 @@
 
 (ns temporal.testing.env
   "Methods and utilities to assist with unit-testing Temporal workflows"
-  (:require [temporal.client.worker :as worker]
+  (:require [medley.core :as m]
+            [temporal.client.worker :as worker]
             [temporal.client.options :as copts]
-            [temporal.internal.utils :as u])
+            [temporal.internal.utils :as u]
+            [temporal.internal.search-attributes :as search-attributes])
   (:import [io.temporal.testing TestWorkflowEnvironment TestEnvironmentOptions TestEnvironmentOptions$Builder]))
+
+(defn set-search-attributes [^TestEnvironmentOptions$Builder builder attributes]
+  (run! (fn [[name value]]
+          (.registerSearchAttribute builder name (search-attributes/indexvalue-type-> value)))
+        attributes))
 
 (def ^:no-doc test-env-options
   {:worker-factory-options         #(.setWorkerFactoryOptions ^TestEnvironmentOptions$Builder %1 (worker/worker-factory-options-> %2))
    :workflow-client-options        #(.setWorkflowClientOptions ^TestEnvironmentOptions$Builder %1 (copts/workflow-client-options-> %2))
    :workflow-service-stub-options  #(.setWorkflowServiceStubsOptions ^TestEnvironmentOptions$Builder %1 (copts/stub-options-> %2))
-   :metrics-scope                  #(.setMetricsScope ^TestEnvironmentOptions$Builder %1 %2)})
+   :metrics-scope                  #(.setMetricsScope ^TestEnvironmentOptions$Builder %1 %2)
+   :search-attributes              set-search-attributes})
 
 (defn ^:no-doc test-env-options->
   ^TestEnvironmentOptions [params]
@@ -35,7 +43,7 @@ Arguments:
 | :workflow-client-options        |                                               | [[copts/client-options]] | |
 | :workflow-service-stub-options  |                                               | [[copts/stub-options]] | |
 | :metrics-scope                  | The scope to be used for metrics reporting    | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
-
+| :search-attributes              | Add a map of search attributes to be registered on the Temporal Server | map | |
 
 "
   ([]
