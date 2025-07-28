@@ -53,7 +53,8 @@
    :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
    :cron-schedule              #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
    :memo                       #(.setMemo ^WorkflowOptions$Builder %1 %2)
-   :search-attributes          #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)})
+   :search-attributes          #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
+   :start-delay                #(.setStartDelay ^WorkflowOptions$Builder %1 %2)})
 
 (defn ^:no-doc wf-options->
   ^WorkflowOptions [params]
