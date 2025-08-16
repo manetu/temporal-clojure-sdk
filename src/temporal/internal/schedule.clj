@@ -39,9 +39,9 @@
   (u/build (SchedulePolicy/newBuilder) schedule-policy-spec params))
 
 (def schedule-spec-spec
-  {:calendars             #(.setCalendars​ ^ScheduleSpec$Builder %1 %2)
+  {:calendars             #(.setCalendars ^ScheduleSpec$Builder %1 %2)
    :cron-expressions      #(.setCronExpressions ^ScheduleSpec$Builder %1 %2)
-   :intervals             #(.setIntervals​ ^ScheduleSpec$Builder %1 %2)
+   :intervals             #(.setIntervals ^ScheduleSpec$Builder %1 %2)
    :end-at                #(.setEndAt ^ScheduleSpec$Builder %1 %2)
    :jitter                #(.setJitter ^ScheduleSpec$Builder %1 %2)
    :skip-at               #(.setSkip ^ScheduleSpec$Builder %1 %2)
