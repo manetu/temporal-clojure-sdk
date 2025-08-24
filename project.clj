@@ -1,4 +1,4 @@
-(defproject io.github.manetu/temporal-sdk "1.3.1-SNAPSHOT"
+(defproject io.github.manetu/temporal-sdk "1.3.1"
   :description "A Temporal SDK for Clojure"
   :url "https://github.com/manetu/temporal-clojure-sdk"
   :license {:name "Apache License 2.0"
