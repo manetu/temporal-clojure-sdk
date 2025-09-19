@@ -67,7 +67,7 @@ Arguments:
 ```
 "
   [env {:keys [task-queue] :as options}]
-  (let [worker (.newWorker env (u/namify task-queue))]
+  (let [worker (.newWorker env (u/namify task-queue) (worker/worker-options-> options))]
     (worker/init worker options)
     (.start env)
     worker))
