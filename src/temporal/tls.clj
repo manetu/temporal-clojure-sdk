@@ -6,8 +6,8 @@
   (:import [java.security KeyStore]
            [java.security.cert CertificateFactory X509Certificate]
            [javax.net.ssl TrustManagerFactory]
-           [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]
-           [io.grpc.netty.shaded.io.netty.handler.ssl SslContext]))
+           [io.temporal.shaded.io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]
+           [io.temporal.shaded.io.grpc.netty.shaded.io.netty.handler.ssl SslContext]))
 
 (defn- new-ca
   ^X509Certificate [certpath]
