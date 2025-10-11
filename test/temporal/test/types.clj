@@ -8,8 +8,8 @@
             [temporal.internal.schedule :as s]
             [temporal.internal.child-workflow :as cw])
   (:import [java.time Duration Instant]
-           [io.grpc Grpc InsecureChannelCredentials Metadata]
-           [io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
+           [io.temporal.shaded.io.grpc Grpc InsecureChannelCredentials Metadata]
+           [io.temporal.shaded.io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
 
 (deftest workflow-options
   (testing "Verify that our workflow options work"
