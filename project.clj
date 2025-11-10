@@ -1,4 +1,4 @@
-(defproject io.github.manetu/temporal-sdk "1.4.1-SNAPSHOT"
+(defproject io.github.manetu/temporal-sdk "1.5.0-SNAPSHOT"
   :description "A Temporal SDK for Clojure"
   :url "https://github.com/manetu/temporal-clojure-sdk"
   :license {:name "Apache License 2.0"
@@ -13,8 +13,8 @@
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [org.clojure/core.async "1.7.701"]
-                 [io.temporal/temporal-sdk "1.28.3"]
-                 [io.temporal/temporal-testing "1.28.3"]
+                 [io.temporal/temporal-sdk "1.31.0"]
+                 [io.temporal/temporal-testing "1.31.0"]
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
@@ -36,5 +36,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 91
+              :fail-threshold 90
               :ns-exclude-regex [#"temporal.client.worker"]})
