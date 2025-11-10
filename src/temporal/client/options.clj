@@ -3,7 +3,8 @@
   (:import [io.temporal.client WorkflowClientOptions WorkflowClientOptions$Builder]
            [io.temporal.common.interceptors WorkflowClientInterceptorBase]
            [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder]
-           [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]))
+           [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]
+           [io.temporal.authorization AuthorizationTokenSupplier]))
 
 (def workflow-client-options
   "
@@ -46,6 +47,12 @@
   ^ScheduleClientOptions [params]
   (u/build (ScheduleClientOptions/newBuilder (ScheduleClientOptions/getDefaultInstance)) schedule-client-options params))
 
+(defn ^:no-doc apikey-auth-fn->
+  ^AuthorizationTokenSupplier [f]
+  (reify AuthorizationTokenSupplier
+    (supply [_]
+      (f))))
+
 (def stub-options
   "
 `WorkflowServiceStubsOptions` configuration map (See [[temporal.client.core/create-client]] or [[temporal.client.schedule/create-client]])
@@ -54,6 +61,7 @@
 | ------------------------- | --------------------------------------------------------------------------- | ------------ | ------- |
 | :channel                  | Sets gRPC channel to use. Exclusive with target and sslContext              | [ManagedChannel](https://grpc.github.io/grpc-java/javadoc/io/grpc/ManagedChannel.html) | |
 | :ssl-context              | Sets gRPC SSL Context to use (See [[temporal.tls/new-ssl-context]])         | [SslContext](https://netty.io/4.0/api/io/netty/handler/ssl/SslContext.html) | |
+| :api-key-fn               | Sets [a function to return an API Key](https://docs.temporal.io/develop/java/temporal-client#connect-to-temporal-cloud-api-key) for authentication to Temporal Cloud   | A 0-arity (fn) that evaluates to an API Key string | |
 | :enable-https             | Sets option to enable SSL/TLS/HTTPS for gRPC                                | boolean      | false |
 | :rpc-timeout              | Sets the rpc timeout value for non query and non long poll calls            | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 10s |
 | :rpc-long-poll-timeout    | Sets the rpc timeout value                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 60s |
@@ -70,6 +78,7 @@
 "
   {:channel                  #(.setChannel ^WorkflowServiceStubsOptions$Builder %1 %2)
    :ssl-context              #(.setSslContext ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :api-key-fn               #(.addApiKey ^WorkflowServiceStubsOptions$Builder %1 (apikey-auth-fn-> %2))
    :enable-https             #(.setEnableHttps ^WorkflowServiceStubsOptions$Builder %1 %2)
    :target                   #(.setTarget ^WorkflowServiceStubsOptions$Builder %1 %2)
    :rpc-timeout              #(.setRpcTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
@@ -89,5 +98,7 @@
   (u/build (WorkflowServiceStubsOptions/newBuilder) stub-options params))
 
 (defn service-stub->
-  [options timeout]
-  (WorkflowServiceStubs/newConnectedServiceStubs (stub-options-> options) timeout))
+  ([options]
+   (WorkflowServiceStubs/newServiceStubs (stub-options-> options)))
+  ([options timeout]
+   (WorkflowServiceStubs/newConnectedServiceStubs (stub-options-> options) timeout)))

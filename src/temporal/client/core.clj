@@ -12,23 +12,41 @@
   (:import [java.time Duration]
            [io.temporal.client WorkflowClient WorkflowStub]))
 
-(defn create-client
+(defn- ^:no-doc create-client*
+  [service-stub options]
+  (WorkflowClient/newInstance service-stub (copts/workflow-client-options-> options)))
+
+(defn create-client-async
   "
 Creates a new client instance suitable for implementing Temporal workers (See [[temporal.client.worker/start]]) or
-workflow clients (See [[create-workflow]]).
+workflow clients (See [[create-workflow]]).  Will not verify the connection before returning.
 
 Arguments:
 
 - `options`: Options for configuring the `WorkflowClient` (See [[temporal.client.options/workflow-client-options]] and [[temporal.client.options/stub-options]])
-- `timeout`: Connection timeout as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) (default: 5s)
+
+"
+  ([] (create-client-async {}))
+  ([options]
+   (create-client* (copts/service-stub-> options) options)))
+
+(defn create-client
+  "
+Creates a new client instance suitable for implementing Temporal workers (See [[temporal.client.worker/start]]) or
+workflow clients (See [[create-workflow]]).  The caller is blocked while the connection is verified for up to the
+specified timeout duration, or 5s if not specified.
+
+Arguments:
+
+- `options`: Options for configuring the `WorkflowClient` (See [[temporal.client.options/workflow-client-options]] and [[temporal.client.options/stub-options]])
+- `timeout`: Optional connection timeout as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) (Default: 5s).
 
 "
   ([] (create-client {}))
   ([options]
    (create-client options (Duration/ofSeconds 5)))
   ([options timeout]
-   (let [service (copts/service-stub-> options timeout)]
-     (WorkflowClient/newInstance service (copts/workflow-client-options-> options)))))
+   (create-client* (copts/service-stub-> options timeout) options)))
 
 (defn create-workflow
   "
