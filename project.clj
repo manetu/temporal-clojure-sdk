@@ -1,4 +1,4 @@
-(defproject io.github.manetu/temporal-sdk "1.5.2-SNAPSHOT"
+(defproject io.github.manetu/temporal-sdk "1.6.0-SNAPSHOT"
   :description "A Temporal SDK for Clojure"
   :url "https://github.com/manetu/temporal-clojure-sdk"
   :license {:name "Apache License 2.0"
@@ -17,7 +17,7 @@
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
-                 [funcool/promesa "9.2.542"]
+                 [funcool/promesa "11.0.678"]
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]]
   :repl-options {:init-ns user}

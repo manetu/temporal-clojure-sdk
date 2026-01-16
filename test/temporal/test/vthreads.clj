@@ -4,13 +4,19 @@
   (:require [clojure.string :as string]
             [clojure.test :refer :all]
             [promesa.core :as p]
-            [promesa.exec :refer [vthreads-supported?]]
             [taoensso.timbre :as log]
             [temporal.activity :refer [defactivity] :as a]
             [temporal.client.core :as c]
             [temporal.testing.env :as e]
             [temporal.workflow :refer [defworkflow]])
   (:import [java.time Duration]))
+
+;; Check for virtual thread support (Java 21+)
+(def vthreads-supported?
+  (try
+    (Class/forName "java.lang.VirtualThread")
+    true
+    (catch ClassNotFoundException _ false)))
 
 (def task-queue ::default)
 

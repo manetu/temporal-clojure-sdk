@@ -47,62 +47,69 @@
 
 (extend-protocol pt/IPromise
   PromiseAdapter
-  (-map
+
+  ;; -fmap: Apply function to value (no flattening)
+  ;; Replaces v9 -map
+  (-fmap
     ([it f]
      (pt/-promise (.thenApply ^Promise (.p it) (->Func (comp ->temporal f)))))
+    ([it f executor]
+     (pt/-fmap it f)))
 
-    ([it f executor]))
-
-  (-bind
+  ;; -mcat: Monadic bind with one-level flatten
+  ;; Replaces v9 -bind
+  (-mcat
     ([it f]
      (pt/-promise (.thenCompose ^Promise (.p it) (->Func (comp ->temporal f)))))
+    ([it f executor]
+     (pt/-mcat it f)))
 
-    ([it f executor]))
-
+  ;; -then: Apply with multi-level flatten (same as v9)
   (-then
     ([it f]
      (pt/-promise (.thenCompose ^Promise (.p it) (->Func (comp ->temporal f)))))
+    ([it f executor]
+     (pt/-then it f)))
 
-    ([it f executor]))
-
-  (-mapErr
-    ([it f]
-     (letfn [(handler [e]
-               (if (instance? Promise e)
-                 (f (.getCause ^Exception e))
-                 (f e)))]
-       (.exceptionally ^Promise (.p it) (->Func handler))))
-
-    ([it f executor]))
-
-  (-thenErr
+  ;; -merr: Error mapping with flatten
+  ;; Combines old v9 -mapErr and -thenErr behavior
+  (-merr
     ([it f]
      (letfn [(handler [v e]
                (if e
-                 (if (instance? Promise e)
-                   (->temporal (f (.getFailure e)))
-                   (->temporal (f e)))
+                 (let [cause (if (instance? Promise e)
+                               (.getFailure e)
+                               e)]
+                   (->temporal (f cause)))
                  (.p it)))]
        (as-> ^Promise (.p it) $$
          (.handle $$ (->Func handler))
          (.thenCompose $$ fw-identity)
          (pt/-promise $$))))
+    ([it f executor]
+     (pt/-merr it f)))
 
-    ([it f executor]))
-
-  (-handle
+  ;; -hmap: Handle both success and failure
+  ;; Replaces v9 -handle
+  (-hmap
     ([it f]
      (as-> ^Promise (.p it) $$
        (.handle $$ (->Func (comp ->temporal f)))
        (.thenCompose $$ fw-identity)
        (pt/-promise $$)))
+    ([it f executor]
+     (pt/-hmap it f)))
 
-    ([it f executor]))
-
-  (-finally
-    ([it f])
-
-    ([it f executor])))
+  ;; -fnly: Finally handler (return value ignored)
+  ;; Replaces v9 -finally (previously stubbed)
+  (-fnly
+    ([it f]
+     (as-> ^Promise (.p it) $$
+       (.handle $$ (->Func (fn [v e] (f v e) (if e (throw e) v))))
+       (.thenCompose $$ fw-identity)
+       (pt/-promise $$)))
+    ([it f executor]
+     (pt/-fnly it f))))
 
 (extend-protocol pt/IPromiseFactory
   Promise
