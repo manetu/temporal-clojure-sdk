@@ -11,9 +11,9 @@
             [lein-cloverage "1.2.4"]
             [jonase/eastwood "1.3.0"]
             [lein-codox "0.10.8"]]
-  :dependencies [[org.clojure/clojure "1.12.0"]
+  :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/core.async "1.7.701"]
-                 [io.temporal/temporal-shaded "1.32.0"]
+                 [io.temporal/temporal-shaded "1.32.1"]
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
@@ -27,10 +27,10 @@
   :eastwood {:add-linters [:unused-namespaces]}
   :codox {:metadata {:doc/format :markdown}}
 
-  :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.5.0"]
+  :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.5.1"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
-                                    [io.temporal/temporal-opentracing "1.28.3"]]
+                                    [io.temporal/temporal-opentracing "1.32.1"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
