@@ -426,3 +426,42 @@ Non-blocking handlers don't need this - they run to completion atomically.
        ~@body
        (finally
          (.unlock lock#)))))
+
+(defn every-handler-finished?
+  "
+Returns true if all signal and update handlers have completed.
+
+Use this to prevent your workflow from completing while handlers are still processing.
+When handlers perform blocking operations (activities, child workflows, sleep, await),
+the workflow could otherwise return before handlers finish their work, causing:
+- Interrupted handler execution
+- Client errors when retrieving update results
+- Lost work
+
+**Recommended usage:**
+
+Wait for all handlers to complete before returning from your workflow:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {:counter 0})]
+    (register-update-handler!
+      (fn [update-type args]
+        ;; Handler that does async work
+        (let [result @(a/invoke process-activity args)]
+          (swap! state assoc :processed result)
+          @state)))
+    ;; Do main workflow logic...
+    (do-work state)
+    ;; Wait for any in-progress handlers before completing
+    (await every-handler-finished?)
+    @state))
+```
+
+By default, your worker will log a warning when a workflow completes with unfinished
+handlers. Using this function prevents those warnings and ensures handlers complete
+their work.
+"
+  []
+  (Workflow/isEveryHandlerFinished))

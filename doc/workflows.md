@@ -305,6 +305,31 @@ Use a lock to prevent other handlers from interleaving:
     ))
 ```
 
+### Ensuring Handlers Complete Before Workflow Ends
+
+When handlers perform blocking operations (activities, child workflows, sleep, await), your workflow could complete before handlers finish their work. This can cause interrupted handler execution, client errors, or lost work.
+
+Use [temporal.workflow/every-handler-finished?](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#every-handler-finished?) with [temporal.workflow/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#await) to wait for all handlers to complete:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {:counter 0})]
+    (w/register-update-handler!
+      (fn [update-type args]
+        ;; Handler that does async work
+        (let [result @(a/invoke process-activity args)]
+          (swap! state assoc :processed result)
+          @state)))
+    ;; Do main workflow logic...
+    (do-work state)
+    ;; Wait for any in-progress handlers before completing
+    (w/await w/every-handler-finished?)
+    @state))
+```
+
+By default, your worker will log a warning when a workflow completes with unfinished handlers.
+
 ## Exceptions
 
 This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
