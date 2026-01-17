@@ -73,6 +73,28 @@ In this Clojure SDK, developers manage Workflows with the following flow:
     @(get-result w))
 ```
 
+### Workflow ID Conflict Policy
+
+When starting a workflow, you may encounter a situation where a workflow with the same ID is already running.  The `:workflow-id-conflict-policy` option controls this behavior:
+
+| Policy | Description |
+|--------|-------------|
+| `:fail` | Fail with an error if workflow is already running (default) |
+| `:use-existing` | Return a handle to the existing running workflow instead of starting a new one |
+| `:terminate-existing` | Terminate the running workflow and start a new one |
+
+This is particularly useful with [signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start) and [update-with-start](#update-with-start), where you want to interact with an existing workflow if running, or start a new one if not:
+
+```clojure
+(let [w (create-workflow client my-workflow {:task-queue "MyTaskQueue"
+                                              :workflow-id "my-singleton-workflow"
+                                              :workflow-id-conflict-policy :use-existing})]
+    (signal-with-start w :my-signal {:data "value"} {:initial "args"})
+    @(get-result w))
+```
+
+Note: This differs from `:workflow-id-reuse-policy`, which controls whether you can reuse an ID from a *completed/failed/terminated* workflow.  The conflict policy specifically handles *currently running* workflows.
+
 ## Safe blocking within Workflows
 
 A Temporal Workflow instance behaves like a [Lightweight Process](https://en.wikipedia.org/wiki/Light-weight_process) or [Fiber](https://en.wikipedia.org/wiki/Fiber_(computer_science)).  These designs support a high ratio of Workflow instances to CPUs, often in the range of 1000:1 or greater.  Achieving this feat requires controlling the IO in and out of the instance to maximize resource sharing.  Therefore, any LWP/Fiber implementation will generally provide its own IO constructs (e.g., mailboxes, channels, promises, etc.), and Temporal is no exception.
@@ -262,6 +284,55 @@ An update consists of an `update-type` (keyword) and possibly some `args` (any s
 ```clojure
 (update workflow :increment {:amount 5})
 ```
+
+#### Asynchronous Updates
+
+For cases where you want to send an update without blocking until completion, use [temporal.client.core/start-update](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start-update).  This returns a handle that you can use to retrieve the result later:
+
+```clojure
+(let [handle (c/start-update workflow :increment {:amount 5})]
+  ;; Do other work while update is processing...
+  (println "Update ID:" (:id handle))
+  ;; When ready, wait for the result
+  (println "Result:" @(:result handle)))
+```
+
+The handle contains:
+- `:id` - The unique identifier for this update
+- `:execution` - The workflow execution info
+- `:result` - A promise that resolves to the update result
+
+You can customize the behavior with options:
+
+```clojure
+(c/start-update workflow :increment {:amount 5}
+                {:update-id "my-idempotency-key"
+                 :wait-for-stage :completed})  ;; :admitted, :accepted, or :completed
+```
+
+#### Retrieving Update Handles
+
+To retrieve a handle for a previously initiated update, use [temporal.client.core/get-update-handle](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-update-handle):
+
+```clojure
+(let [handle (c/get-update-handle workflow "my-update-id")]
+  @(:result handle))
+```
+
+#### Update-With-Start
+
+To atomically start a workflow (if not running) and send an update, use [temporal.client.core/update-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#update-with-start).  This is useful for ensuring a workflow exists before sending an update:
+
+```clojure
+(let [workflow (c/create-workflow client my-workflow
+                                  {:task-queue task-queue
+                                   :workflow-id "my-workflow-id"
+                                   :workflow-id-conflict-policy :use-existing})
+      handle (c/update-with-start workflow :increment {:amount 5} {:initial-value 0})]
+  @(:result handle))
+```
+
+**Important**: `update-with-start` requires the `:workflow-id-conflict-policy` option to be set in the workflow options (see [Workflow ID Conflict Policy](#workflow-id-conflict-policy)).
 
 ### Coordinating Concurrent Handlers
 

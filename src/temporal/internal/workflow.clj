@@ -10,7 +10,7 @@
             [temporal.internal.exceptions :as e]
             [temporal.internal.signals :as s]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.api.enums.v1 WorkflowIdReusePolicy]
+  (:import [io.temporal.api.enums.v1 WorkflowIdReusePolicy WorkflowIdConflictPolicy]
            [io.temporal.client WorkflowOptions WorkflowOptions$Builder]
            [io.temporal.internal.sync DestroyWorkflowThreadError]
            [io.temporal.workflow Workflow WorkflowInfo]))
@@ -43,18 +43,36 @@
   (or (get workflow-id-reuse-options policy)
       (throw (IllegalArgumentException. (str "Unknown workflow-id-reuse-policy: " policy " Must be one of " (keys workflow-id-reuse-options))))))
 
+(def workflow-id-conflict-options
+  "
+| Value               | Description                                                                  |
+| ------------------- | --------------------------------------------------------------------------- |
+| :fail               | Don't start a new workflow, fail with 'workflow already started' error. (Default) |
+| :use-existing       | Don't start a new workflow, return a handle for the running workflow.       |
+| :terminate-existing | Terminate the running workflow before starting a new one.                   |
+"
+  {:fail               WorkflowIdConflictPolicy/WORKFLOW_ID_CONFLICT_POLICY_FAIL
+   :use-existing       WorkflowIdConflictPolicy/WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+   :terminate-existing WorkflowIdConflictPolicy/WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING})
+
+(defn ^:no-doc workflow-id-conflict-policy->
+  ^WorkflowIdConflictPolicy [policy]
+  (or (get workflow-id-conflict-options policy)
+      (throw (IllegalArgumentException. (str "Unknown workflow-id-conflict-policy: " policy " Must be one of " (keys workflow-id-conflict-options))))))
+
 (def ^:no-doc wf-option-spec
-  {:task-queue                 #(.setTaskQueue ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id                #(.setWorkflowId ^WorkflowOptions$Builder %1 (u/namify %2))
-   :workflow-id-reuse-policy   #(.setWorkflowIdReusePolicy ^WorkflowOptions$Builder %1 (workflow-id-reuse-policy-> %2))
-   :workflow-execution-timeout #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-run-timeout       #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
-   :workflow-task-timeout      #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
-   :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
-   :cron-schedule              #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
-   :memo                       #(.setMemo ^WorkflowOptions$Builder %1 %2)
-   :search-attributes          #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
-   :start-delay                #(.setStartDelay ^WorkflowOptions$Builder %1 %2)})
+  {:task-queue                  #(.setTaskQueue ^WorkflowOptions$Builder %1 (u/namify %2))
+   :workflow-id                 #(.setWorkflowId ^WorkflowOptions$Builder %1 (u/namify %2))
+   :workflow-id-reuse-policy    #(.setWorkflowIdReusePolicy ^WorkflowOptions$Builder %1 (workflow-id-reuse-policy-> %2))
+   :workflow-id-conflict-policy #(.setWorkflowIdConflictPolicy ^WorkflowOptions$Builder %1 (workflow-id-conflict-policy-> %2))
+   :workflow-execution-timeout  #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
+   :workflow-run-timeout        #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
+   :workflow-task-timeout       #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
+   :retry-options               #(.setRetryOptions %1 (common/retry-options-> %2))
+   :cron-schedule               #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
+   :memo                        #(.setMemo ^WorkflowOptions$Builder %1 %2)
+   :search-attributes           #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
+   :start-delay                 #(.setStartDelay ^WorkflowOptions$Builder %1 %2)})
 
 (defn ^:no-doc wf-options->
   ^WorkflowOptions [params]

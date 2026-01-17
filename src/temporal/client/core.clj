@@ -10,7 +10,7 @@
             [temporal.internal.utils :as u]
             [temporal.internal.exceptions :as e])
   (:import [java.time Duration]
-           [io.temporal.client WorkflowClient WorkflowStub]))
+           [io.temporal.client WorkflowClient WorkflowStub WorkflowUpdateHandle WorkflowUpdateStage UpdateOptions]))
 
 (defn- ^:no-doc create-client*
   [service-stub options]
@@ -52,15 +52,40 @@ Arguments:
   "
 Create a new workflow-stub instance, suitable for managing and interacting with a workflow through it's lifecycle.
 
-*N.B.: The workflow will remain in an uninitialized and idle state until explicitly started with either ([[start]]) or
-([[signal-with-start]]).*
+*N.B.: The workflow will remain in an uninitialized and idle state until explicitly started with either ([[start]]),
+([[signal-with-start]]), or ([[update-with-start]]).*
+
+Arguments:
+
+- `client`: A workflow client created with [[create-client]]
+- `workflow`: The workflow definition (defworkflow)
+- `options`: A map of workflow options:
+
+| Option                         | Description                                                |
+|--------------------------------|------------------------------------------------------------|
+| `:task-queue`                  | (required) Task queue for the workflow                     |
+| `:workflow-id`                 | Unique workflow identifier (auto-generated if not provided)|
+| `:workflow-id-reuse-policy`    | Policy for reusing IDs of completed workflows              |
+| `:workflow-id-conflict-policy` | Policy when workflow ID is already running (see below)     |
+| `:workflow-execution-timeout`  | Total workflow execution timeout (Duration)                |
+| `:workflow-run-timeout`        | Single workflow run timeout (Duration)                     |
+| `:workflow-task-timeout`       | Workflow task processing timeout (Duration)                |
+| `:retry-options`               | Retry configuration map                                    |
+| `:cron-schedule`               | Cron expression for scheduled execution                    |
+| `:memo`                        | Arbitrary metadata map                                     |
+| `:search-attributes`           | Indexed attributes for workflow visibility                 |
+| `:start-delay`                 | Delay before starting the workflow (Duration)              |
+
+Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
+
+| Policy               | Description                                          |
+|----------------------|------------------------------------------------------|
+| `:fail`              | Fail if workflow is already running (default)        |
+| `:use-existing`      | Use the existing running workflow                    |
+| `:terminate-existing`| Terminate existing workflow and start new one        |
 
 ```clojure
-(defworkflow my-workflow
-  [ctx args]
-  ...)
-
-(let [w (create client my-workflow {:task-queue ::my-task-queue})]
+(let [w (create-workflow client my-workflow {:task-queue ::my-task-queue})]
   ;; do something with the instance 'w')
 ```
   "
@@ -84,8 +109,25 @@ Starts 'worklow' with 'params'"
 
 (defn signal-with-start
   "
-Signals 'workflow' with 'signal-params' on signal 'signal-name', starting it if not already running.  'wf-params' are
-used as workflow start arguments if the workflow needs to be started"
+Signals 'workflow' with 'signal-params' on signal 'signal-name', starting it if not already running.
+
+Arguments:
+
+- `workflow`: workflow instance created with [[create-workflow]]
+- `signal-name`: keyword (or coerceable) identifying the signal
+- `signal-params`: data to send with the signal
+- `wf-params`: arguments passed to the workflow if it needs to be started
+
+By default, this will fail if the workflow is already running.  To signal an existing workflow instead,
+set `:workflow-id-conflict-policy` to `:use-existing` when calling [[create-workflow]]:
+
+```clojure
+(let [w (create-workflow client my-workflow {:task-queue task-queue
+                                              :workflow-id \"my-id\"
+                                              :workflow-id-conflict-policy :use-existing})]
+  (signal-with-start w :my-signal {:data \"value\"} {:initial \"args\"}))
+```
+"
   [{:keys [^WorkflowStub stub] :as workflow} signal-name signal-params wf-params]
   (log/trace "signal-with-start->" "signal:" signal-name signal-params "workflow-params:" wf-params)
   (.signalWithStart stub (u/namify signal-name) (u/->objarray signal-params) (u/->objarray wf-params)))
@@ -167,6 +209,137 @@ Arguments:
   (log/trace "update:" update-type args)
   (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))
       (nippy/thaw)))
+
+(def ^:private stage->enum
+  "Maps keyword stage to WorkflowUpdateStage enum"
+  {:admitted  WorkflowUpdateStage/ADMITTED
+   :accepted  WorkflowUpdateStage/ACCEPTED
+   :completed WorkflowUpdateStage/COMPLETED})
+
+(defn- wrap-update-handle
+  "Wraps a WorkflowUpdateHandle to return a Clojure map with async result"
+  [^WorkflowUpdateHandle handle]
+  {:id (.getId handle)
+   :execution (.getExecution handle)
+   :result (-> (.getResultAsync handle)
+               (p/then nippy/thaw)
+               (p/catch e/slingshot? e/recast-stone)
+               (p/catch (fn [e]
+                          (log/error e)
+                          (throw e))))})
+
+(defn- build-update-options
+  "Builds UpdateOptions from a Clojure map"
+  [{:keys [update-name update-id wait-for-stage first-execution-run-id]}]
+  (let [builder (UpdateOptions/newBuilder u/bytes-type)]
+    (when update-name
+      (.setUpdateName builder (u/namify update-name)))
+    (when update-id
+      (.setUpdateId builder update-id))
+    (when wait-for-stage
+      (.setWaitForStage builder (get stage->enum wait-for-stage)))
+    (when first-execution-run-id
+      (.setFirstExecutionRunId builder first-execution-run-id))
+    (.build builder)))
+
+(defn start-update
+  "
+Asynchronously sends an update with 'update-type' and 'args' to 'workflow'.
+Returns an update handle that can be used to get the result later.
+
+The update is processed by an update-handler, registered inside the workflow definition
+using [[temporal.workflow/register-update-handler!]].
+
+Arguments:
+- `workflow`: workflow instance created with [[create-workflow]]
+- `update-type`: keyword (or coerceable into a keyword) identifying the update type
+- `args`: serializable update params
+- `options`: (optional) map with:
+  - `:wait-for-stage`: one of :admitted, :accepted, or :completed (default: :accepted)
+  - `:update-id`: unique ID for idempotency (auto-generated if not provided)
+
+Returns a map with:
+- `:id`: the update ID
+- `:execution`: the workflow execution
+- `:result`: a promise that resolves to the update result
+
+```clojure
+(let [handle (start-update workflow :increment {:amount 5})]
+  ;; Do other work...
+  @(:result handle))
+```
+"
+  ([workflow update-type args]
+   (start-update workflow update-type args {}))
+  ([{:keys [^WorkflowStub stub] :as workflow} update-type args {:keys [wait-for-stage update-id] :as options}]
+   (log/trace "start-update:" update-type args options)
+   (let [handle (if update-id
+                  ;; Use UpdateOptions when custom update-id is specified
+                  (let [update-options (build-update-options (merge {:update-name update-type
+                                                                     :wait-for-stage (or wait-for-stage :accepted)}
+                                                                    options))]
+                    (.startUpdate stub update-options (u/->objarray args)))
+                  ;; Use simple overload when no custom options needed
+                  (let [stage (get stage->enum (or wait-for-stage :accepted))]
+                    (.startUpdate stub (u/namify update-type) stage u/bytes-type (u/->objarray args))))]
+     (wrap-update-handle handle))))
+
+(defn get-update-handle
+  "
+Retrieves a handle to a previously initiated update request using its unique identifier.
+
+Arguments:
+- `workflow`: workflow instance created with [[create-workflow]]
+- `update-id`: the unique ID of the update
+
+Returns a map with:
+- `:id`: the update ID
+- `:execution`: the workflow execution
+- `:result`: a promise that resolves to the update result
+
+```clojure
+(let [handle (get-update-handle workflow \"my-update-id\")]
+  @(:result handle))
+```
+"
+  [{:keys [^WorkflowStub stub] :as workflow} update-id]
+  (log/trace "get-update-handle:" update-id)
+  (let [handle (.getUpdateHandle stub update-id u/bytes-type)]
+    (wrap-update-handle handle)))
+
+(defn update-with-start
+  "
+Sends an update to a workflow, starting it if not already running.
+This is useful for ensuring a workflow exists before sending an update.
+
+Arguments:
+- `workflow`: workflow instance created with [[create-workflow]]
+- `update-type`: keyword (or coerceable into a keyword) identifying the update type
+- `update-args`: serializable update params
+- `start-args`: arguments to pass if the workflow needs to be started
+- `options`: (optional) map with:
+  - `:wait-for-stage`: one of :admitted, :accepted, or :completed (default: :accepted)
+  - `:update-id`: unique ID for idempotency (auto-generated if not provided)
+
+Returns a map with:
+- `:id`: the update ID
+- `:execution`: the workflow execution
+- `:result`: a promise that resolves to the update result
+
+```clojure
+(let [handle (update-with-start workflow :increment {:amount 5} {:initial-value 0})]
+  @(:result handle))
+```
+"
+  ([workflow update-type update-args start-args]
+   (update-with-start workflow update-type update-args start-args {}))
+  ([{:keys [^WorkflowStub stub] :as workflow} update-type update-args start-args options]
+   (log/trace "update-with-start:" update-type update-args start-args options)
+   (let [update-options (build-update-options (merge {:update-name update-type
+                                                      :wait-for-stage (or (:wait-for-stage options) :accepted)}
+                                                     options))
+         handle (.startUpdateWithStart stub update-options (u/->objarray update-args) (u/->objarray start-args))]
+     (wrap-update-handle handle))))
 
 (defn cancel
   "
