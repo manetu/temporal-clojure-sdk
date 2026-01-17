@@ -143,6 +143,31 @@ Arguments:
   (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))
       (nippy/thaw)))
 
+(defn update
+  "
+Sends an update with 'update-type' and 'args' to 'workflow', returns a value.
+The update is processed by an update-handler, registered inside the workflow definition
+using [[temporal.workflow/register-update-handler!]].
+
+Unlike queries, updates can:
+- Mutate workflow state
+- Perform blocking operations (activities, child workflows, sleep, await)
+- Return values to the caller
+
+Arguments:
+- `workflow`: workflow instance created with [[create-workflow]]
+- `update-type`: keyword (or coerceable into a keyword) identifying the update type
+- `args`: serializable update params
+
+```clojure
+(update workflow :increment {:amount 5})
+```
+"
+  [{:keys [^WorkflowStub stub] :as workflow} update-type args]
+  (log/trace "update:" update-type args)
+  (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))
+      (nippy/thaw)))
+
 (defn cancel
   "
 Gracefully cancels 'workflow'
