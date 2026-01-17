@@ -6,11 +6,12 @@
    [taoensso.nippy :as nippy]
    [taoensso.timbre :as log]
    [promesa.core :as p]
+   [temporal.common :as common]
    [temporal.internal.exceptions :as e]
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
-  (:import [io.temporal.workflow DynamicQueryHandler Workflow]
+  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler Workflow]
            [java.util.function Supplier]
            [java.time Duration]))
 
@@ -187,3 +188,54 @@ Arguments:
          (p/catch (fn [e]
                     (log/error e)
                     (throw e)))))))
+
+(def ^:no-doc continue-as-new-option-spec
+  {:task-queue            #(.setTaskQueue ^ContinueAsNewOptions$Builder %1 (u/namify %2))
+   :workflow-run-timeout  #(.setWorkflowRunTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :workflow-task-timeout #(.setWorkflowTaskTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :retry-options         #(.setRetryOptions ^ContinueAsNewOptions$Builder %1 (common/retry-options-> %2))
+   :memo                  #(.setMemo ^ContinueAsNewOptions$Builder %1 %2)
+   :search-attributes     #(.setSearchAttributes ^ContinueAsNewOptions$Builder %1 %2)})
+
+(defn ^:no-doc continue-as-new-options->
+  ^ContinueAsNewOptions [options]
+  (u/build (ContinueAsNewOptions/newBuilder) continue-as-new-option-spec options))
+
+(defn continue-as-new
+  "
+Continues the current workflow execution as a new execution with the same workflow ID.
+
+This is useful for long-running workflows that accumulate large event histories. By calling
+continue-as-new, the workflow completes and immediately restarts with a fresh event history,
+passing 'params' as the new workflow arguments.
+
+This function never returns - it always throws a ContinueAsNewError that terminates
+the current workflow run.
+
+Arguments:
+- `params`: Arguments to pass to the new workflow run
+- `options`: (optional) Options map to customize the new run
+
+#### options map
+
+| Value                   | Description                                                          | Type         | Default |
+| ----------------------- | -------------------------------------------------------------------- | ------------ | ------- |
+| :task-queue             | Task queue for the new run                                           | String       | same as current |
+| :workflow-run-timeout   | Timeout for the new workflow run                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout  | Timeout for individual workflow tasks                                | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options          | Retry options for the new run                                        | [[temporal.common/retry-options]] | |
+| :memo                   | Memo fields for the new run                                          | Map          | |
+| :search-attributes      | Search attributes for the new run                                    | Map          | |
+
+```clojure
+(defworkflow long-running-workflow
+  [{:keys [iteration data]}]
+  ;; Process data...
+  (when (should-continue? data)
+    (continue-as-new {:iteration (inc iteration) :data (next-batch data)})))
+```
+"
+  ([params] (continue-as-new params {}))
+  ([params options]
+   (log/trace "continue-as-new:" params options)
+   (Workflow/continueAsNew (continue-as-new-options-> options) (u/->objarray params))))

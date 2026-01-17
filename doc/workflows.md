@@ -257,3 +257,33 @@ We can safely handle both the original and the new desired scenario by branching
       (= version w/default-version)  @(a/invoke versioned-activity :v1)
       (= version 1)                  @(a/local-invoke versioned-activity :v2)))
 ```
+
+## Continue-As-New
+
+Long-running Workflows can accumulate large event histories.  To prevent unbounded growth, you can use [temporal.workflow/continue-as-new](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#continue-as-new) to complete the current Workflow execution and immediately start a new execution with the same Workflow ID but a fresh event history.
+
+This is particularly useful for Workflows that:
+- Process items in batches
+- Run indefinitely (e.g., polling or subscription patterns)
+- Accumulate state over time that can be summarized
+
+```clojure
+(require '[temporal.workflow :as w])
+
+(defworkflow batch-processor
+  [{:keys [batch-number processed-count]}]
+  (let [items (fetch-next-batch)
+        new-count (+ processed-count (count items))]
+    (process-items items)
+    (if (more-batches?)
+      (w/continue-as-new {:batch-number (inc batch-number)
+                          :processed-count new-count})
+      {:total-processed new-count})))
+```
+
+Continue-as-new accepts an optional options map to override settings for the new run:
+
+```clojure
+(w/continue-as-new params {:task-queue "different-queue"
+                           :workflow-run-timeout (Duration/ofHours 1)})
+```
