@@ -8,6 +8,7 @@
    [promesa.core :as p]
    [temporal.common :as common]
    [temporal.internal.exceptions :as e]
+   [temporal.internal.search-attributes :as sa]
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
@@ -239,3 +240,43 @@ Arguments:
   ([params options]
    (log/trace "continue-as-new:" params options)
    (Workflow/continueAsNew (continue-as-new-options-> options) (u/->objarray params))))
+
+(defn upsert-search-attributes
+  "
+Updates search attributes for the current workflow execution.
+
+Search attributes are indexed metadata that can be used to filter and search for workflows
+in the Temporal UI and via the Visibility API. Unlike memo, search attributes are indexed
+and can be used in list workflow queries.
+
+The attributes map should have string keys (attribute names) and values that are maps
+with :type and :value keys. To unset an attribute, pass nil as the value.
+
+Arguments:
+- `attrs`: A map of {attribute-name {:type type :value value}} where type is one of:
+  - :text - Full-text searchable string
+  - :keyword - Exact-match string
+  - :int - 64-bit integer (Long)
+  - :double - 64-bit floating point
+  - :bool - Boolean
+  - :datetime - OffsetDateTime
+  - :keyword-list - List of exact-match strings
+
+To unset an attribute, use {:type type :value nil}
+
+Note: Search attributes must be pre-registered with the Temporal server before use.
+In test environments, use the :search-attributes option when creating the test environment.
+
+```clojure
+(defworkflow order-workflow
+  [{:keys [order-id status]}]
+  ;; Update status as workflow progresses
+  (upsert-search-attributes {\"OrderStatus\" {:type :keyword :value \"processing\"}})
+  ;; ... do work ...
+  (upsert-search-attributes {\"OrderStatus\" {:type :keyword :value \"completed\"}
+                             \"CompletedAt\" {:type :datetime :value (java.time.OffsetDateTime/now)}}))
+```
+"
+  [attrs]
+  (log/trace "upsert-search-attributes:" attrs)
+  (Workflow/upsertTypedSearchAttributes (sa/search-attribute-updates-> attrs)))

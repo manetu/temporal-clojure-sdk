@@ -287,3 +287,41 @@ Continue-as-new accepts an optional options map to override settings for the new
 (w/continue-as-new params {:task-queue "different-queue"
                            :workflow-run-timeout (Duration/ofHours 1)})
 ```
+
+## Search Attributes
+
+Search attributes are indexed metadata that can be used to filter and search for Workflows in the Temporal UI and via the Visibility API.
+
+### Setting Search Attributes at Start
+
+You can set search attributes when starting a Workflow:
+
+```clojure
+(c/create-workflow client my-workflow {:task-queue task-queue
+                                       :search-attributes {"CustomerId" "12345"}})
+```
+
+### Upserting Search Attributes
+
+To update search attributes during Workflow execution, use [temporal.workflow/upsert-search-attributes](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#upsert-search-attributes):
+
+```clojure
+(require '[temporal.workflow :as w])
+
+(defworkflow order-workflow
+  [{:keys [order-id]}]
+  (w/upsert-search-attributes {"OrderStatus" {:type :keyword :value "processing"}})
+  ;; ... process order ...
+  (w/upsert-search-attributes {"OrderStatus" {:type :keyword :value "completed"}}))
+```
+
+Supported search attribute types:
+- `:text` - Full-text searchable string
+- `:keyword` - Exact-match string
+- `:int` - 64-bit integer
+- `:double` - 64-bit floating point
+- `:bool` - Boolean
+- `:datetime` - OffsetDateTime
+- `:keyword-list` - List of exact-match strings
+
+Note: Custom search attributes must be pre-registered with the Temporal server before use.
