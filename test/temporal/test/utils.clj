@@ -43,7 +43,7 @@
 (defn destroy-service []
   (swap! state
          (fn [{:keys [env] :as s}]
-           (e/stop env)
+           (e/synchronized-stop env)
            (dissoc s :env :worker :client))))
 
 (defn wrap-service [test-fn]

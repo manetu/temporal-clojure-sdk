@@ -2,6 +2,7 @@
 
 (ns temporal.test.search-attributes
   (:require [clojure.test :refer :all]
+            [promesa.core :as p]
             [temporal.client.core :as c]
             [temporal.testing.env :as e]
             [temporal.workflow :refer [defworkflow]])
@@ -24,7 +25,8 @@
                                                                 :workflow-execution-timeout (Duration/ofSeconds 1)
                                                                 :retry-options {:maximum-attempts 1}})]
     (c/start workflow {})
-    @(c/get-result workflow)))
+    @(-> (c/get-result workflow)
+         (p/finally (fn [_ _] (e/synchronized-stop env))))))
 
 (deftest the-test
   (testing "Verifies that we can utilize custom search attributes"
