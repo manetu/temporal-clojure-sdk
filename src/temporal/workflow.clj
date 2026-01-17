@@ -12,7 +12,7 @@
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
-  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler Workflow]
+  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler Workflow]
            [java.util.function Supplier]
            [java.time Duration]))
 
@@ -80,6 +80,71 @@ Arguments:
          (log/trace "handling query->" "query-type:" query-type "args:" args)
          (-> (f query-type args)
              (nippy/freeze)))))))
+
+(defn register-update-handler!
+  "
+Registers a DynamicUpdateHandler listener that handles updates sent to the workflow.
+
+Updates are similar to queries but with important differences:
+- Updates can mutate workflow state
+- Updates can perform blocking operations (activities, child workflows, sleep, await)
+- Updates return values to the caller
+- Updates can have optional validators
+
+Use inside a workflow definition with 'f' closing over the workflow state (e.g. atom).
+The handler function should return a value that will be sent back to the update caller.
+
+Arguments:
+- `f`: a 2-arity function, expecting 2 arguments, evaluating to something serializable.
+
+`f` arguments:
+- `update-type`: keyword identifying the update type
+- `args`: params value or data structure
+
+#### Options:
+
+When using the 2-arity version, you can provide an options map:
+
+| Value      | Description                                              | Type     |
+| ---------- | -------------------------------------------------------- | -------- |
+| :validator | A function (fn [update-type args]) that validates inputs | Function |
+
+The validator function is called before the update handler and should throw an exception
+if the update request is invalid. Validators must not mutate state or perform blocking operations.
+
+```clojure
+(defworkflow stateful-workflow
+  [{:keys [init] :as args}]
+  (let [state (atom init)]
+    (register-update-handler!
+      (fn [update-type args]
+        (when (= update-type :increment)
+          (swap! state update :counter + (:amount args))
+          @state))
+      {:validator (fn [update-type args]
+                    (when (and (= update-type :increment)
+                               (neg? (:amount args)))
+                      (throw (IllegalArgumentException. \"amount must be positive\"))))})
+    ;; workflow implementation
+    ))
+```
+"
+  ([f] (register-update-handler! f {}))
+  ([f {:keys [validator]}]
+   (Workflow/registerListener
+    (reify DynamicUpdateHandler
+      (handleExecute [_ update-type args]
+        (let [update-type (keyword update-type)
+              args (u/->args args)]
+          (log/trace "handling update->" "update-type:" update-type "args:" args)
+          (-> (f update-type args)
+              (nippy/freeze))))
+      (handleValidate [_ update-type args]
+        (when validator
+          (let [update-type (keyword update-type)
+                args (u/->args args)]
+            (log/trace "validating update->" "update-type:" update-type "args:" args)
+            (validator update-type args))))))))
 
 (defmacro defworkflow
   "

@@ -220,6 +220,49 @@ A query consists of a `query-type` (keyword) and possibly some `args` (any seria
 (query workflow :my-query {:foo "bar"})
 ```
 
+### Temporal Updates
+
+Updates are similar to signals and queries but combine features of both: like signals, they can mutate workflow state; like queries, they return values to the caller.  Additionally, updates can perform blocking operations such as invoking activities or child workflows.
+
+#### Registering an Update handler
+
+To enable updates on a Workflow, use [temporal.workflow/register-update-handler!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#register-update-handler!).
+The update handler is a function that has a reference to the Workflow state, typically by closing over it.  It processes the update, optionally mutates state, and returns a response.
+
+```clojure
+(defworkflow stateful-workflow
+  [{:keys [init] :as args}]
+  (let [state (atom init)]
+    (register-update-handler!
+      (fn [update-type args]
+        (when (= update-type :increment)
+          (swap! state update :counter + (:amount args))
+          @state)))
+    ;; workflow implementation
+    ))
+```
+
+You may optionally provide a validator function that runs before the update handler.  Validators must not mutate state or perform blocking operations:
+
+```clojure
+(register-update-handler!
+  (fn [update-type args]
+    (swap! state update :counter + (:amount args))
+    @state)
+  {:validator (fn [update-type args]
+                (when (neg? (:amount args))
+                  (throw (IllegalArgumentException. "amount must be positive"))))})
+```
+
+#### Sending Updates to a Workflow
+
+You may send an update to a Workflow with [temporal.client.core/update](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#update).
+An update consists of an `update-type` (keyword) and possibly some `args` (any serializable data structure).
+
+```clojure
+(update workflow :increment {:amount 5})
+```
+
 ## Exceptions
 
 This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
