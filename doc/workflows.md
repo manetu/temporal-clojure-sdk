@@ -263,6 +263,48 @@ An update consists of an `update-type` (keyword) and possibly some `args` (any s
 (update workflow :increment {:amount 5})
 ```
 
+### Coordinating Concurrent Handlers
+
+Temporal workflows execute on a single thread, so you don't need to worry about parallelism. However, you do need to consider concurrency when signal or update handlers can **block** (call activities, sleep, await, or child workflows).
+
+**Non-blocking handlers** run to completion atomically. No lock needed:
+
+```clojure
+;; Non-blocking handler - runs atomically, no lock needed
+(fn [update-type {:keys [amount]}]
+  (swap! state update :counter + amount)
+  @state)
+```
+
+**Blocking handlers** can be interrupted at await points, allowing other handlers to interleave. Use [temporal.workflow/new-lock](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#new-lock) and [temporal.workflow/with-lock](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#with-lock) when a handler performs blocking operations AND accesses shared state:
+
+```clojure
+;; PROBLEM: Handler could be interrupted at the activity call
+(fn [update-type args]
+  (let [current (:counter @state)]                       ;; read state
+    (let [result @(a/invoke validate-activity current)]  ;; BLOCKS - other handlers can run!
+      (swap! state assoc :validated result))))           ;; another handler may have changed state
+```
+
+Use a lock to prevent other handlers from interleaving:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {})
+        lock (w/new-lock)]
+    (w/register-update-handler!
+      (fn [update-type args]
+        (w/with-lock lock
+          ;; Lock ensures no other handler runs during this sequence
+          (let [current (:counter @state)]
+            (let [result @(a/invoke validate-activity current)]
+              (swap! state assoc :validated result)
+              @state)))))
+    ;; workflow implementation
+    ))
+```
+
 ## Exceptions
 
 This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.

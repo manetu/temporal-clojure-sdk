@@ -12,7 +12,7 @@
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
-  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler Workflow]
+  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler Workflow WorkflowLock]
            [java.util.function Supplier]
            [java.time Duration]))
 
@@ -345,3 +345,84 @@ In test environments, use the :search-attributes option when creating the test e
   [attrs]
   (log/trace "upsert-search-attributes:" attrs)
   (Workflow/upsertTypedSearchAttributes (sa/search-attribute-updates-> attrs)))
+
+(defn new-lock
+  "
+Creates a new WorkflowLock for coordinating concurrent handler execution.
+
+Temporal workflows execute on a single thread, so you don't need to worry about
+parallelism. However, you DO need to worry about concurrency when signal or update
+handlers can block (call activities, sleep, await, or child workflows).
+
+**When you DON'T need this:**
+
+Non-blocking handlers run to completion atomically. No lock needed:
+
+```clojure
+;; Non-blocking handler - runs atomically, no lock needed
+(fn [update-type {:keys [amount]}]
+  (swap! state update :counter + amount)
+  @state)
+```
+
+**When you DO need this:**
+
+Use a lock when your handler performs blocking operations AND accesses shared state.
+At await points, other handlers can run and interleave:
+
+```clojure
+;; PROBLEM: Handler could be interrupted at the activity call
+(fn [update-type args]
+  (let [current (:counter @state)]                       ;; read state
+    (let [result @(a/invoke validate-activity current)]  ;; BLOCKS - other handlers can run!
+      (swap! state assoc :validated result))))           ;; another handler may have changed state
+```
+
+**Solution with lock:**
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {})
+        lock (new-lock)]
+    (register-update-handler!
+      (fn [update-type args]
+        (with-lock lock
+          ;; Lock ensures no other handler runs during this sequence
+          (let [current (:counter @state)]
+            (let [result @(a/invoke validate-activity current)]
+              (swap! state assoc :validated result)
+              @state)))))
+    ;; workflow implementation
+    ))
+```
+"
+  ^WorkflowLock []
+  (Workflow/newWorkflowLock))
+
+(defmacro with-lock
+  "
+Executes body while holding the given WorkflowLock.
+
+Ensures that the lock is released even if an exception is thrown.
+Use this to protect handlers that perform blocking operations (activities, sleep,
+await, child workflows) and access shared workflow state.
+
+Non-blocking handlers don't need this - they run to completion atomically.
+
+```clojure
+(let [lock (new-lock)]
+  (with-lock lock
+    ;; No other handler can interleave during this sequence
+    (let [current (:value @state)]
+      (let [result @(a/invoke process-activity current)]
+        (swap! state assoc :processed result)))))
+```
+"
+  [lock & body]
+  `(let [lock# ~lock]
+     (.lock lock#)
+     (try
+       ~@body
+       (finally
+         (.unlock lock#)))))
