@@ -238,10 +238,10 @@ Arguments:
 
 ```clojure
 (defworkflow my-workflow
-   [ctx {:keys [foo] :as args}]
+   [{:keys [foo]}]
    ...)
 
-(invoke my-workflow {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
+(invoke my-workflow {:foo \"bar\"} {:workflow-run-timeout (Duration/ofSeconds 30)})
 ```
 "
   ([workflow params] (invoke workflow params {}))

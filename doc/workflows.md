@@ -103,7 +103,7 @@ In this Clojure SDK, this support comes in a few different flavors:
 
 ### Promises
 
-Specific methods naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  The Clojure SDK integrates these Workflow-safe Promises with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
+Certain operations naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  The Clojure SDK integrates these Workflow-safe Promises with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
 
 #### Safe to use
 
@@ -215,7 +215,7 @@ Alternatively, you may opt to handle signals directly with [temporal.signals/reg
 
 Your Workflow may respond to [queries](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#query).
 
-A temporal query is similar to a temporal signal; both are messages sent to a running Workflow.
+A Temporal query is similar to a Temporal signal; both are messages sent to a running Workflow.
 The difference is that a signal intends to change the behaviour of the Workflow, whereas a query intends to inspect its current state.
 Querying the state of a Workflow implies that the Workflow must maintain its state while running, typically in a Clojure [atom](https://clojuredocs.org/clojure.core/atom) or [ref](https://clojure.org/reference/refs).
 
