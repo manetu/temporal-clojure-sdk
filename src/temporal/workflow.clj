@@ -12,7 +12,8 @@
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
-  (:import [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler Workflow WorkflowLock]
+  (:import [io.temporal.api.common.v1 WorkflowExecution]
+           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
            [java.util.function Supplier]
            [java.time Duration]))
 
@@ -465,3 +466,125 @@ their work.
 "
   []
   (Workflow/isEveryHandlerFinished))
+
+(defn external-workflow
+  "
+Creates a handle to an external workflow for signaling or canceling from within a workflow.
+
+Use this function when you need to interact with another workflow that is running
+independently (not a child workflow). This allows you to send signals or request
+cancellation of the external workflow.
+
+Note: External workflow stubs do NOT support query, update, or getResult - these
+are client-only operations. Use the client API for those operations.
+
+Arguments:
+- `workflow-id`: The ID of the external workflow
+- `run-id`: (optional) The specific run ID to target. If not provided, targets the
+  latest run of the workflow.
+
+Returns a map containing:
+- `:stub` - The underlying ExternalWorkflowStub
+- `:workflow-id` - The workflow ID
+- `:run-id` - The run ID (if provided)
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-workflow-id]}]
+  ;; Create handle to external workflow
+  (let [worker (external-workflow worker-workflow-id)]
+    ;; Send signal to external workflow
+    (signal-external worker :status-update {:progress 50})
+    ;; Or cancel it if needed
+    (cancel-external worker)))
+```
+"
+  ([workflow-id]
+   {:stub        (Workflow/newUntypedExternalWorkflowStub ^String workflow-id)
+    :workflow-id workflow-id})
+  ([workflow-id run-id]
+   (let [execution (-> (WorkflowExecution/newBuilder)
+                       (.setWorkflowId workflow-id)
+                       (.setRunId run-id)
+                       (.build))]
+     {:stub        (Workflow/newUntypedExternalWorkflowStub execution)
+      :workflow-id workflow-id
+      :run-id      run-id})))
+
+(defn cancel-external
+  "
+Requests cancellation of an external workflow from within the current workflow.
+
+This sends a cancellation request to the external workflow. The external workflow
+will receive a CancellationException and can handle it appropriately.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+
+```clojure
+(defworkflow supervisor-workflow
+  [{:keys [worker-id]}]
+  (let [worker (external-workflow worker-id)]
+    ;; Cancel the worker workflow
+    (cancel-external worker)))
+```
+"
+  [external-wf]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)]
+    (log/trace "cancel-external:" (:workflow-id external-wf))
+    (.cancel stub)))
+
+(defn signal-external
+  "
+Sends a signal to an external workflow from within the current workflow.
+
+This is an alternative to [[temporal.signals/>!]] that works with external workflow
+handles created by [[external-workflow]]. The external workflow must have a signal
+handler registered for the given signal name.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+- `signal-name`: The signal name (keyword or string)
+- `params`: The signal payload (must be serializable)
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-ids]}]
+  (doseq [worker-id worker-ids]
+    (let [worker (external-workflow worker-id)]
+      ;; Send signal to each worker
+      (signal-external worker :new-task {:task-id (random-uuid)}))))
+```
+"
+  [external-wf signal-name params]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)
+        signal-name (u/namify signal-name)]
+    (log/trace "signal-external:" (:workflow-id external-wf) signal-name params)
+    (.signal stub signal-name (u/->objarray params))))
+
+(defn get-execution
+  "
+Returns the workflow execution information for an external workflow handle.
+
+This provides access to the workflow ID and run ID of the external workflow.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+
+Returns a map containing:
+- `:workflow-id` - The workflow ID
+- `:run-id` - The run ID
+
+```clojure
+(defworkflow parent-workflow
+  [{:keys [child-id]}]
+  (let [child (external-workflow child-id)
+        execution (get-execution child)]
+    (log/info \"External workflow:\" (:workflow-id execution) (:run-id execution))))
+```
+"
+  [external-wf]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)
+        execution (.getExecution stub)]
+    {:workflow-id (.getWorkflowId execution)
+     :run-id      (.getRunId execution)}))

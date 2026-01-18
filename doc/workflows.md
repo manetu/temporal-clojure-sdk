@@ -209,6 +209,8 @@ Alternatively, you may opt to handle signals directly with [temporal.signals/reg
     @state))
 ```
 
+**Note:** The operations above are for *receiving* signals within a workflow. To *send* signals from outside a workflow (from a client), use [temporal.client.core/>!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#%3E!). To send signals to other workflows from within a workflow, see [External Workflows](#external-workflows).
+
 ### Temporal Queries
 
 Your Workflow may respond to [queries](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#query).
@@ -400,6 +402,69 @@ Use [temporal.workflow/every-handler-finished?](https://cljdoc.org/d/io.github.m
 ```
 
 By default, your worker will log a warning when a workflow completes with unfinished handlers.
+
+### External Workflows
+
+External workflows allow you to interact with independently running workflows from within a workflow context. Unlike child workflows (which are started and managed by a parent workflow), external workflows are started independently and you simply obtain a handle to communicate with them.
+
+Use external workflows when you need to:
+- Send signals to workflows started by other processes
+- Request cancellation of independently running workflows
+- Coordinate between workflows that have separate lifecycles
+
+**Note:** External workflow stubs do NOT support query, update, or getResult operations—those are client-only operations. External workflows support only signaling and cancellation.
+
+#### Creating an External Workflow Handle
+
+Use [temporal.workflow/external-workflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#external-workflow) to create a handle to an external workflow:
+
+```clojure
+(require '[temporal.workflow :as w])
+
+;; Create handle using just workflow ID (targets latest run)
+(let [handle (w/external-workflow "other-workflow-id")]
+  ...)
+
+;; Or specify a specific run ID
+(let [handle (w/external-workflow "other-workflow-id" "specific-run-id")]
+  ...)
+```
+
+#### Signaling External Workflows
+
+Use [temporal.workflow/signal-external](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#signal-external) to send signals to an external workflow:
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-ids]}]
+  (doseq [worker-id worker-ids]
+    (let [worker (w/external-workflow worker-id)]
+      (w/signal-external worker :new-task {:task-id (random-uuid)}))))
+```
+
+#### Canceling External Workflows
+
+Use [temporal.workflow/cancel-external](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#cancel-external) to request cancellation of an external workflow:
+
+```clojure
+(defworkflow supervisor-workflow
+  [{:keys [worker-id]}]
+  (let [worker (w/external-workflow worker-id)]
+    ;; Request cancellation
+    (w/cancel-external worker)))
+```
+
+The external workflow will receive a `CancellationException` and can handle it appropriately.
+
+#### Getting Execution Info
+
+Use [temporal.workflow/get-execution](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#get-execution) to retrieve the workflow ID and run ID:
+
+```clojure
+(let [handle (w/external-workflow "some-workflow-id")
+      execution (w/get-execution handle)]
+  (log/info "Workflow:" (:workflow-id execution) "Run:" (:run-id execution)))
+```
 
 ## Exceptions
 
