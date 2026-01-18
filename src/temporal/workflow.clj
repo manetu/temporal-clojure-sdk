@@ -6,11 +6,14 @@
    [taoensso.nippy :as nippy]
    [taoensso.timbre :as log]
    [promesa.core :as p]
+   [temporal.common :as common]
    [temporal.internal.exceptions :as e]
+   [temporal.internal.search-attributes :as sa]
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w]
    [temporal.internal.child-workflow :as cw])
-  (:import [io.temporal.workflow DynamicQueryHandler Workflow]
+  (:import [io.temporal.api.common.v1 WorkflowExecution]
+           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
            [java.util.function Supplier]
            [java.time Duration]))
 
@@ -78,6 +81,71 @@ Arguments:
          (log/trace "handling query->" "query-type:" query-type "args:" args)
          (-> (f query-type args)
              (nippy/freeze)))))))
+
+(defn register-update-handler!
+  "
+Registers a DynamicUpdateHandler listener that handles updates sent to the workflow.
+
+Updates are similar to queries but with important differences:
+- Updates can mutate workflow state
+- Updates can perform blocking operations (activities, child workflows, sleep, await)
+- Updates return values to the caller
+- Updates can have optional validators
+
+Use inside a workflow definition with 'f' closing over the workflow state (e.g. atom).
+The handler function should return a value that will be sent back to the update caller.
+
+Arguments:
+- `f`: a 2-arity function, expecting 2 arguments, evaluating to something serializable.
+
+`f` arguments:
+- `update-type`: keyword identifying the update type
+- `args`: params value or data structure
+
+#### Options:
+
+When using the 2-arity version, you can provide an options map:
+
+| Value      | Description                                              | Type     |
+| ---------- | -------------------------------------------------------- | -------- |
+| :validator | A function (fn [update-type args]) that validates inputs | Function |
+
+The validator function is called before the update handler and should throw an exception
+if the update request is invalid. Validators must not mutate state or perform blocking operations.
+
+```clojure
+(defworkflow stateful-workflow
+  [{:keys [init] :as args}]
+  (let [state (atom init)]
+    (register-update-handler!
+      (fn [update-type args]
+        (when (= update-type :increment)
+          (swap! state update :counter + (:amount args))
+          @state))
+      {:validator (fn [update-type args]
+                    (when (and (= update-type :increment)
+                               (neg? (:amount args)))
+                      (throw (IllegalArgumentException. \"amount must be positive\"))))})
+    ;; workflow implementation
+    ))
+```
+"
+  ([f] (register-update-handler! f {}))
+  ([f {:keys [validator]}]
+   (Workflow/registerListener
+    (reify DynamicUpdateHandler
+      (handleExecute [_ update-type args]
+        (let [update-type (keyword update-type)
+              args (u/->args args)]
+          (log/trace "handling update->" "update-type:" update-type "args:" args)
+          (-> (f update-type args)
+              (nippy/freeze))))
+      (handleValidate [_ update-type args]
+        (when validator
+          (let [update-type (keyword update-type)
+                args (u/->args args)]
+            (log/trace "validating update->" "update-type:" update-type "args:" args)
+            (validator update-type args))))))))
 
 (defmacro defworkflow
   "
@@ -170,10 +238,10 @@ Arguments:
 
 ```clojure
 (defworkflow my-workflow
-   [ctx {:keys [foo] :as args}]
+   [{:keys [foo]}]
    ...)
 
-(invoke my-workflow {:foo \"bar\"} {:start-to-close-timeout (Duration/ofSeconds 3))
+(invoke my-workflow {:foo \"bar\"} {:workflow-run-timeout (Duration/ofSeconds 30)})
 ```
 "
   ([workflow params] (invoke workflow params {}))
@@ -187,3 +255,336 @@ Arguments:
          (p/catch (fn [e]
                     (log/error e)
                     (throw e)))))))
+
+(def ^:no-doc continue-as-new-option-spec
+  {:task-queue            #(.setTaskQueue ^ContinueAsNewOptions$Builder %1 (u/namify %2))
+   :workflow-run-timeout  #(.setWorkflowRunTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :workflow-task-timeout #(.setWorkflowTaskTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :retry-options         #(.setRetryOptions ^ContinueAsNewOptions$Builder %1 (common/retry-options-> %2))
+   :memo                  #(.setMemo ^ContinueAsNewOptions$Builder %1 %2)
+   :search-attributes     #(.setSearchAttributes ^ContinueAsNewOptions$Builder %1 %2)})
+
+(defn ^:no-doc continue-as-new-options->
+  ^ContinueAsNewOptions [options]
+  (u/build (ContinueAsNewOptions/newBuilder) continue-as-new-option-spec options))
+
+(defn continue-as-new
+  "
+Continues the current workflow execution as a new execution with the same workflow ID.
+
+This is useful for long-running workflows that accumulate large event histories. By calling
+continue-as-new, the workflow completes and immediately restarts with a fresh event history,
+passing 'params' as the new workflow arguments.
+
+This function never returns - it always throws a ContinueAsNewError that terminates
+the current workflow run.
+
+Arguments:
+- `params`: Arguments to pass to the new workflow run
+- `options`: (optional) Options map to customize the new run
+
+#### options map
+
+| Value                   | Description                                                          | Type         | Default |
+| ----------------------- | -------------------------------------------------------------------- | ------------ | ------- |
+| :task-queue             | Task queue for the new run                                           | String       | same as current |
+| :workflow-run-timeout   | Timeout for the new workflow run                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout  | Timeout for individual workflow tasks                                | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options          | Retry options for the new run                                        | [[temporal.common/retry-options]] | |
+| :memo                   | Memo fields for the new run                                          | Map          | |
+| :search-attributes      | Search attributes for the new run                                    | Map          | |
+
+```clojure
+(defworkflow long-running-workflow
+  [{:keys [iteration data]}]
+  ;; Process data...
+  (when (should-continue? data)
+    (continue-as-new {:iteration (inc iteration) :data (next-batch data)})))
+```
+"
+  ([params] (continue-as-new params {}))
+  ([params options]
+   (log/trace "continue-as-new:" params options)
+   (Workflow/continueAsNew (continue-as-new-options-> options) (u/->objarray params))))
+
+(defn upsert-search-attributes
+  "
+Updates search attributes for the current workflow execution.
+
+Search attributes are indexed metadata that can be used to filter and search for workflows
+in the Temporal UI and via the Visibility API. Unlike memo, search attributes are indexed
+and can be used in list workflow queries.
+
+The attributes map should have string keys (attribute names) and values that are maps
+with :type and :value keys. To unset an attribute, pass nil as the value.
+
+Arguments:
+- `attrs`: A map of {attribute-name {:type type :value value}} where type is one of:
+  - :text - Full-text searchable string
+  - :keyword - Exact-match string
+  - :int - 64-bit integer (Long)
+  - :double - 64-bit floating point
+  - :bool - Boolean
+  - :datetime - OffsetDateTime
+  - :keyword-list - List of exact-match strings
+
+To unset an attribute, use {:type type :value nil}
+
+Note: Search attributes must be pre-registered with the Temporal server before use.
+In test environments, use the :search-attributes option when creating the test environment.
+
+```clojure
+(defworkflow order-workflow
+  [{:keys [order-id status]}]
+  ;; Update status as workflow progresses
+  (upsert-search-attributes {\"OrderStatus\" {:type :keyword :value \"processing\"}})
+  ;; ... do work ...
+  (upsert-search-attributes {\"OrderStatus\" {:type :keyword :value \"completed\"}
+                             \"CompletedAt\" {:type :datetime :value (java.time.OffsetDateTime/now)}}))
+```
+"
+  [attrs]
+  (log/trace "upsert-search-attributes:" attrs)
+  (Workflow/upsertTypedSearchAttributes (sa/search-attribute-updates-> attrs)))
+
+(defn new-lock
+  "
+Creates a new WorkflowLock for coordinating concurrent handler execution.
+
+Temporal workflows execute on a single thread, so you don't need to worry about
+parallelism. However, you DO need to worry about concurrency when signal or update
+handlers can block (call activities, sleep, await, or child workflows).
+
+**When you DON'T need this:**
+
+Non-blocking handlers run to completion atomically. No lock needed:
+
+```clojure
+;; Non-blocking handler - runs atomically, no lock needed
+(fn [update-type {:keys [amount]}]
+  (swap! state update :counter + amount)
+  @state)
+```
+
+**When you DO need this:**
+
+Use a lock when your handler performs blocking operations AND accesses shared state.
+At await points, other handlers can run and interleave:
+
+```clojure
+;; PROBLEM: Handler could be interrupted at the activity call
+(fn [update-type args]
+  (let [current (:counter @state)]                       ;; read state
+    (let [result @(a/invoke validate-activity current)]  ;; BLOCKS - other handlers can run!
+      (swap! state assoc :validated result))))           ;; another handler may have changed state
+```
+
+**Solution with lock:**
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {})
+        lock (new-lock)]
+    (register-update-handler!
+      (fn [update-type args]
+        (with-lock lock
+          ;; Lock ensures no other handler runs during this sequence
+          (let [current (:counter @state)]
+            (let [result @(a/invoke validate-activity current)]
+              (swap! state assoc :validated result)
+              @state)))))
+    ;; workflow implementation
+    ))
+```
+"
+  ^WorkflowLock []
+  (Workflow/newWorkflowLock))
+
+(defmacro with-lock
+  "
+Executes body while holding the given WorkflowLock.
+
+Ensures that the lock is released even if an exception is thrown.
+Use this to protect handlers that perform blocking operations (activities, sleep,
+await, child workflows) and access shared workflow state.
+
+Non-blocking handlers don't need this - they run to completion atomically.
+
+```clojure
+(let [lock (new-lock)]
+  (with-lock lock
+    ;; No other handler can interleave during this sequence
+    (let [current (:value @state)]
+      (let [result @(a/invoke process-activity current)]
+        (swap! state assoc :processed result)))))
+```
+"
+  [lock & body]
+  `(let [lock# ~lock]
+     (.lock lock#)
+     (try
+       ~@body
+       (finally
+         (.unlock lock#)))))
+
+(defn every-handler-finished?
+  "
+Returns true if all signal and update handlers have completed.
+
+Use this to prevent your workflow from completing while handlers are still processing.
+When handlers perform blocking operations (activities, child workflows, sleep, await),
+the workflow could otherwise return before handlers finish their work, causing:
+- Interrupted handler execution
+- Client errors when retrieving update results
+- Lost work
+
+**Recommended usage:**
+
+Wait for all handlers to complete before returning from your workflow:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {:counter 0})]
+    (register-update-handler!
+      (fn [update-type args]
+        ;; Handler that does async work
+        (let [result @(a/invoke process-activity args)]
+          (swap! state assoc :processed result)
+          @state)))
+    ;; Do main workflow logic...
+    (do-work state)
+    ;; Wait for any in-progress handlers before completing
+    (await every-handler-finished?)
+    @state))
+```
+
+By default, your worker will log a warning when a workflow completes with unfinished
+handlers. Using this function prevents those warnings and ensures handlers complete
+their work.
+"
+  []
+  (Workflow/isEveryHandlerFinished))
+
+(defn external-workflow
+  "
+Creates a handle to an external workflow for signaling or canceling from within a workflow.
+
+Use this function when you need to interact with another workflow that is running
+independently (not a child workflow). This allows you to send signals or request
+cancellation of the external workflow.
+
+Note: External workflow stubs do NOT support query, update, or getResult - these
+are client-only operations. Use the client API for those operations.
+
+Arguments:
+- `workflow-id`: The ID of the external workflow
+- `run-id`: (optional) The specific run ID to target. If not provided, targets the
+  latest run of the workflow.
+
+Returns a map containing:
+- `:stub` - The underlying ExternalWorkflowStub
+- `:workflow-id` - The workflow ID
+- `:run-id` - The run ID (if provided)
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-workflow-id]}]
+  ;; Create handle to external workflow
+  (let [worker (external-workflow worker-workflow-id)]
+    ;; Send signal to external workflow
+    (signal-external worker :status-update {:progress 50})
+    ;; Or cancel it if needed
+    (cancel-external worker)))
+```
+"
+  ([workflow-id]
+   {:stub        (Workflow/newUntypedExternalWorkflowStub ^String workflow-id)
+    :workflow-id workflow-id})
+  ([workflow-id run-id]
+   (let [execution (-> (WorkflowExecution/newBuilder)
+                       (.setWorkflowId workflow-id)
+                       (.setRunId run-id)
+                       (.build))]
+     {:stub        (Workflow/newUntypedExternalWorkflowStub execution)
+      :workflow-id workflow-id
+      :run-id      run-id})))
+
+(defn cancel-external
+  "
+Requests cancellation of an external workflow from within the current workflow.
+
+This sends a cancellation request to the external workflow. The external workflow
+will receive a CancellationException and can handle it appropriately.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+
+```clojure
+(defworkflow supervisor-workflow
+  [{:keys [worker-id]}]
+  (let [worker (external-workflow worker-id)]
+    ;; Cancel the worker workflow
+    (cancel-external worker)))
+```
+"
+  [external-wf]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)]
+    (log/trace "cancel-external:" (:workflow-id external-wf))
+    (.cancel stub)))
+
+(defn signal-external
+  "
+Sends a signal to an external workflow from within the current workflow.
+
+This is an alternative to [[temporal.signals/>!]] that works with external workflow
+handles created by [[external-workflow]]. The external workflow must have a signal
+handler registered for the given signal name.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+- `signal-name`: The signal name (keyword or string)
+- `params`: The signal payload (must be serializable)
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-ids]}]
+  (doseq [worker-id worker-ids]
+    (let [worker (external-workflow worker-id)]
+      ;; Send signal to each worker
+      (signal-external worker :new-task {:task-id (random-uuid)}))))
+```
+"
+  [external-wf signal-name params]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)
+        signal-name (u/namify signal-name)]
+    (log/trace "signal-external:" (:workflow-id external-wf) signal-name params)
+    (.signal stub signal-name (u/->objarray params))))
+
+(defn get-execution
+  "
+Returns the workflow execution information for an external workflow handle.
+
+This provides access to the workflow ID and run ID of the external workflow.
+
+Arguments:
+- `external-wf`: An external workflow handle created by [[external-workflow]]
+
+Returns a map containing:
+- `:workflow-id` - The workflow ID
+- `:run-id` - The run ID
+
+```clojure
+(defworkflow parent-workflow
+  [{:keys [child-id]}]
+  (let [child (external-workflow child-id)
+        execution (get-execution child)]
+    (log/info \"External workflow:\" (:workflow-id execution) (:run-id execution))))
+```
+"
+  [external-wf]
+  (let [^ExternalWorkflowStub stub (:stub external-wf)
+        execution (.getExecution stub)]
+    {:workflow-id (.getWorkflowId execution)
+     :run-id      (.getRunId execution)}))

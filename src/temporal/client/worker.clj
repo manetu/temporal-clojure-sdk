@@ -7,6 +7,7 @@
             [temporal.internal.workflow :as w]
             [temporal.internal.utils :as u])
   (:import [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
+           [io.temporal.worker.tuning PollerBehavior PollerBehaviorAutoscaling]
            [temporal.internal.dispatcher DynamicWorkflowProxy]
            [io.temporal.workflow DynamicWorkflow]
            [io.temporal.common.interceptors WorkerInterceptor]))
@@ -51,6 +52,28 @@ Options for configuring the worker-factory (See [[start]])
   ^WorkerFactoryOptions [params]
   (u/build (WorkerFactoryOptions/newBuilder (WorkerFactoryOptions/getDefaultInstance)) worker-factory-options params))
 
+(defn ^:no-doc poller-behavior->
+  "Converts a poller behavior keyword or map to a PollerBehavior instance.
+   - :autoscaling - Creates a PollerBehaviorAutoscaling with default options
+   - {:type :autoscaling} - Same as :autoscaling
+   - {:type :autoscaling :min-pollers n :max-pollers m} - Autoscaling with custom bounds"
+  ^PollerBehavior [behavior]
+  (cond
+    (= behavior :autoscaling)
+    (PollerBehaviorAutoscaling.)
+
+    (map? behavior)
+    (let [{:keys [type min-pollers max-pollers]} behavior]
+      (case type
+        :autoscaling
+        (cond-> (PollerBehaviorAutoscaling.)
+          min-pollers (.setMinPollers min-pollers)
+          max-pollers (.setMaxPollers max-pollers))
+        (throw (IllegalArgumentException. (str "Unknown poller behavior type: " type)))))
+
+    :else
+    (throw (IllegalArgumentException. (str "Invalid poller behavior: " behavior)))))
+
 (def worker-options
   "
 Options for configuring workers (See [[start]])
@@ -79,6 +102,9 @@ Options for configuring workers (See [[start]])
 | :using-virtual-threads-on-local-activity-worker |           | Use virtual threads for the local activity task executors created by this worker.                                                                                                                                                                 | boolean                                                                        | false                                                       |
 | :using-virtual-threads-on-nexus-worker          |           | Use Virtual Threads for the Nexus task executors created by this worker.                                                                                                                                                                          | boolean                                                                        | false                                                       |
 | :using-virtual-threads-on-workflow-worker       |           | Use Virtual Threads for the Workflow task executors created by this worker.                                                                                                                                                                       | boolean                                                                        | false                                                       |
+| :workflow-task-pollers-behavior                 |           | Configures poller scaling behavior for workflow tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
+| :activity-task-pollers-behavior                 |           | Configures poller scaling behavior for activity tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
+| :nexus-task-pollers-behavior                    |           | Configures poller scaling behavior for nexus tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                    | keyword / map                                                                  |                                                             |
 
 #### dispatch-table
 
@@ -113,7 +139,10 @@ Options for configuring workers (See [[start]])
    :using-virtual-threads-on-activity-worker         #(.setUsingVirtualThreadsOnActivityWorker ^WorkerOptions$Builder %1 %2)
    :using-virtual-threads-on-local-activity-worker   #(.setUsingVirtualThreadsOnLocalActivityWorker ^WorkerOptions$Builder %1 %2)
    :using-virtual-threads-on-nexus-worker            #(.setUsingVirtualThreadsOnNexusWorker ^WorkerOptions$Builder %1 %2)
-   :using-virtual-threads-on-workflow-worker         #(.setUsingVirtualThreadsOnWorkflowWorker ^WorkerOptions$Builder %1 %2)})
+   :using-virtual-threads-on-workflow-worker         #(.setUsingVirtualThreadsOnWorkflowWorker ^WorkerOptions$Builder %1 %2)
+   :workflow-task-pollers-behavior                   #(.setWorkflowTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
+   :activity-task-pollers-behavior                   #(.setActivityTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
+   :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))})
 
 (defn ^:no-doc worker-options->
   ^WorkerOptions [params]

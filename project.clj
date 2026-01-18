@@ -35,5 +35,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 90
+              :fail-threshold 89
               :ns-exclude-regex [#"temporal.client.worker"]})

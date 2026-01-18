@@ -73,6 +73,28 @@ In this Clojure SDK, developers manage Workflows with the following flow:
     @(get-result w))
 ```
 
+### Workflow ID Conflict Policy
+
+When starting a workflow, you may encounter a situation where a workflow with the same ID is already running.  The `:workflow-id-conflict-policy` option controls this behavior:
+
+| Policy | Description |
+|--------|-------------|
+| `:fail` | Fail with an error if workflow is already running (default) |
+| `:use-existing` | Return a handle to the existing running workflow instead of starting a new one |
+| `:terminate-existing` | Terminate the running workflow and start a new one |
+
+This is particularly useful with [signal-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#signal-with-start) and [update-with-start](#update-with-start), where you want to interact with an existing workflow if running, or start a new one if not:
+
+```clojure
+(let [w (create-workflow client my-workflow {:task-queue "MyTaskQueue"
+                                              :workflow-id "my-singleton-workflow"
+                                              :workflow-id-conflict-policy :use-existing})]
+    (signal-with-start w :my-signal {:data "value"} {:initial "args"})
+    @(get-result w))
+```
+
+Note: This differs from `:workflow-id-reuse-policy`, which controls whether you can reuse an ID from a *completed/failed/terminated* workflow.  The conflict policy specifically handles *currently running* workflows.
+
 ## Safe blocking within Workflows
 
 A Temporal Workflow instance behaves like a [Lightweight Process](https://en.wikipedia.org/wiki/Light-weight_process) or [Fiber](https://en.wikipedia.org/wiki/Fiber_(computer_science)).  These designs support a high ratio of Workflow instances to CPUs, often in the range of 1000:1 or greater.  Achieving this feat requires controlling the IO in and out of the instance to maximize resource sharing.  Therefore, any LWP/Fiber implementation will generally provide its own IO constructs (e.g., mailboxes, channels, promises, etc.), and Temporal is no exception.
@@ -81,7 +103,7 @@ In this Clojure SDK, this support comes in a few different flavors:
 
 ### Promises
 
-Specific methods naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  The Clojure SDK integrates these Workflow-safe Promises with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
+Certain operations naturally return Workflow-safe Promises, such as invoking an Activity from a Workflow.  The Clojure SDK integrates these Workflow-safe Promises with the [promesa](https://github.com/funcool/promesa) library.  This section serves to document their use and limitations.
 
 #### Safe to use
 
@@ -187,11 +209,13 @@ Alternatively, you may opt to handle signals directly with [temporal.signals/reg
     @state))
 ```
 
+**Note:** The operations above are for *receiving* signals within a workflow. To *send* signals from outside a workflow (from a client), use [temporal.client.core/>!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#%3E!). To send signals to other workflows from within a workflow, see [External Workflows](#external-workflows).
+
 ### Temporal Queries
 
 Your Workflow may respond to [queries](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#query).
 
-A temporal query is similar to a temporal signal; both are messages sent to a running Workflow.
+A Temporal query is similar to a Temporal signal; both are messages sent to a running Workflow.
 The difference is that a signal intends to change the behaviour of the Workflow, whereas a query intends to inspect its current state.
 Querying the state of a Workflow implies that the Workflow must maintain its state while running, typically in a Clojure [atom](https://clojuredocs.org/clojure.core/atom) or [ref](https://clojure.org/reference/refs).
 
@@ -218,6 +242,228 @@ A query consists of a `query-type` (keyword) and possibly some `args` (any seria
 
 ```clojure
 (query workflow :my-query {:foo "bar"})
+```
+
+### Temporal Updates
+
+Updates are similar to signals and queries but combine features of both: like signals, they can mutate workflow state; like queries, they return values to the caller.  Additionally, updates can perform blocking operations such as invoking activities or child workflows.
+
+#### Registering an Update handler
+
+To enable updates on a Workflow, use [temporal.workflow/register-update-handler!](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#register-update-handler!).
+The update handler is a function that has a reference to the Workflow state, typically by closing over it.  It processes the update, optionally mutates state, and returns a response.
+
+```clojure
+(defworkflow stateful-workflow
+  [{:keys [init] :as args}]
+  (let [state (atom init)]
+    (register-update-handler!
+      (fn [update-type args]
+        (when (= update-type :increment)
+          (swap! state update :counter + (:amount args))
+          @state)))
+    ;; workflow implementation
+    ))
+```
+
+You may optionally provide a validator function that runs before the update handler.  Validators must not mutate state or perform blocking operations:
+
+```clojure
+(register-update-handler!
+  (fn [update-type args]
+    (swap! state update :counter + (:amount args))
+    @state)
+  {:validator (fn [update-type args]
+                (when (neg? (:amount args))
+                  (throw (IllegalArgumentException. "amount must be positive"))))})
+```
+
+#### Sending Updates to a Workflow
+
+You may send an update to a Workflow with [temporal.client.core/update](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#update).
+An update consists of an `update-type` (keyword) and possibly some `args` (any serializable data structure).
+
+```clojure
+(update workflow :increment {:amount 5})
+```
+
+#### Asynchronous Updates
+
+For cases where you want to send an update without blocking until completion, use [temporal.client.core/start-update](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#start-update).  This returns a handle that you can use to retrieve the result later:
+
+```clojure
+(let [handle (c/start-update workflow :increment {:amount 5})]
+  ;; Do other work while update is processing...
+  (println "Update ID:" (:id handle))
+  ;; When ready, wait for the result
+  (println "Result:" @(:result handle)))
+```
+
+The handle contains:
+- `:id` - The unique identifier for this update
+- `:execution` - The workflow execution info
+- `:result` - A promise that resolves to the update result
+
+You can customize the behavior with options:
+
+```clojure
+(c/start-update workflow :increment {:amount 5}
+                {:update-id "my-idempotency-key"
+                 :wait-for-stage :completed})  ;; :admitted, :accepted, or :completed
+```
+
+#### Retrieving Update Handles
+
+To retrieve a handle for a previously initiated update, use [temporal.client.core/get-update-handle](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#get-update-handle):
+
+```clojure
+(let [handle (c/get-update-handle workflow "my-update-id")]
+  @(:result handle))
+```
+
+#### Update-With-Start
+
+To atomically start a workflow (if not running) and send an update, use [temporal.client.core/update-with-start](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.client.core#update-with-start).  This is useful for ensuring a workflow exists before sending an update:
+
+```clojure
+(let [workflow (c/create-workflow client my-workflow
+                                  {:task-queue task-queue
+                                   :workflow-id "my-workflow-id"
+                                   :workflow-id-conflict-policy :use-existing})
+      handle (c/update-with-start workflow :increment {:amount 5} {:initial-value 0})]
+  @(:result handle))
+```
+
+**Important**: `update-with-start` requires the `:workflow-id-conflict-policy` option to be set in the workflow options (see [Workflow ID Conflict Policy](#workflow-id-conflict-policy)).
+
+### Coordinating Concurrent Handlers
+
+Temporal workflows execute on a single thread, so you don't need to worry about parallelism. However, you do need to consider concurrency when signal or update handlers can **block** (call activities, sleep, await, or child workflows).
+
+**Non-blocking handlers** run to completion atomically. No lock needed:
+
+```clojure
+;; Non-blocking handler - runs atomically, no lock needed
+(fn [update-type {:keys [amount]}]
+  (swap! state update :counter + amount)
+  @state)
+```
+
+**Blocking handlers** can be interrupted at await points, allowing other handlers to interleave. Use [temporal.workflow/new-lock](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#new-lock) and [temporal.workflow/with-lock](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#with-lock) when a handler performs blocking operations AND accesses shared state:
+
+```clojure
+;; PROBLEM: Handler could be interrupted at the activity call
+(fn [update-type args]
+  (let [current (:counter @state)]                       ;; read state
+    (let [result @(a/invoke validate-activity current)]  ;; BLOCKS - other handlers can run!
+      (swap! state assoc :validated result))))           ;; another handler may have changed state
+```
+
+Use a lock to prevent other handlers from interleaving:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {})
+        lock (w/new-lock)]
+    (w/register-update-handler!
+      (fn [update-type args]
+        (w/with-lock lock
+          ;; Lock ensures no other handler runs during this sequence
+          (let [current (:counter @state)]
+            (let [result @(a/invoke validate-activity current)]
+              (swap! state assoc :validated result)
+              @state)))))
+    ;; workflow implementation
+    ))
+```
+
+### Ensuring Handlers Complete Before Workflow Ends
+
+When handlers perform blocking operations (activities, child workflows, sleep, await), your workflow could complete before handlers finish their work. This can cause interrupted handler execution, client errors, or lost work.
+
+Use [temporal.workflow/every-handler-finished?](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#every-handler-finished?) with [temporal.workflow/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#await) to wait for all handlers to complete:
+
+```clojure
+(defworkflow my-workflow
+  [args]
+  (let [state (atom {:counter 0})]
+    (w/register-update-handler!
+      (fn [update-type args]
+        ;; Handler that does async work
+        (let [result @(a/invoke process-activity args)]
+          (swap! state assoc :processed result)
+          @state)))
+    ;; Do main workflow logic...
+    (do-work state)
+    ;; Wait for any in-progress handlers before completing
+    (w/await w/every-handler-finished?)
+    @state))
+```
+
+By default, your worker will log a warning when a workflow completes with unfinished handlers.
+
+### External Workflows
+
+External workflows allow you to interact with independently running workflows from within a workflow context. Unlike child workflows (which are started and managed by a parent workflow), external workflows are started independently and you simply obtain a handle to communicate with them.
+
+Use external workflows when you need to:
+- Send signals to workflows started by other processes
+- Request cancellation of independently running workflows
+- Coordinate between workflows that have separate lifecycles
+
+**Note:** External workflow stubs do NOT support query, update, or getResult operations—those are client-only operations. External workflows support only signaling and cancellation.
+
+#### Creating an External Workflow Handle
+
+Use [temporal.workflow/external-workflow](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#external-workflow) to create a handle to an external workflow:
+
+```clojure
+(require '[temporal.workflow :as w])
+
+;; Create handle using just workflow ID (targets latest run)
+(let [handle (w/external-workflow "other-workflow-id")]
+  ...)
+
+;; Or specify a specific run ID
+(let [handle (w/external-workflow "other-workflow-id" "specific-run-id")]
+  ...)
+```
+
+#### Signaling External Workflows
+
+Use [temporal.workflow/signal-external](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#signal-external) to send signals to an external workflow:
+
+```clojure
+(defworkflow coordinator-workflow
+  [{:keys [worker-ids]}]
+  (doseq [worker-id worker-ids]
+    (let [worker (w/external-workflow worker-id)]
+      (w/signal-external worker :new-task {:task-id (random-uuid)}))))
+```
+
+#### Canceling External Workflows
+
+Use [temporal.workflow/cancel-external](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#cancel-external) to request cancellation of an external workflow:
+
+```clojure
+(defworkflow supervisor-workflow
+  [{:keys [worker-id]}]
+  (let [worker (w/external-workflow worker-id)]
+    ;; Request cancellation
+    (w/cancel-external worker)))
+```
+
+The external workflow will receive a `CancellationException` and can handle it appropriately.
+
+#### Getting Execution Info
+
+Use [temporal.workflow/get-execution](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#get-execution) to retrieve the workflow ID and run ID:
+
+```clojure
+(let [handle (w/external-workflow "some-workflow-id")
+      execution (w/get-execution handle)]
+  (log/info "Workflow:" (:workflow-id execution) "Run:" (:run-id execution)))
 ```
 
 ## Exceptions
@@ -257,3 +503,71 @@ We can safely handle both the original and the new desired scenario by branching
       (= version w/default-version)  @(a/invoke versioned-activity :v1)
       (= version 1)                  @(a/local-invoke versioned-activity :v2)))
 ```
+
+## Continue-As-New
+
+Long-running Workflows can accumulate large event histories.  To prevent unbounded growth, you can use [temporal.workflow/continue-as-new](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#continue-as-new) to complete the current Workflow execution and immediately start a new execution with the same Workflow ID but a fresh event history.
+
+This is particularly useful for Workflows that:
+- Process items in batches
+- Run indefinitely (e.g., polling or subscription patterns)
+- Accumulate state over time that can be summarized
+
+```clojure
+(require '[temporal.workflow :as w])
+
+(defworkflow batch-processor
+  [{:keys [batch-number processed-count]}]
+  (let [items (fetch-next-batch)
+        new-count (+ processed-count (count items))]
+    (process-items items)
+    (if (more-batches?)
+      (w/continue-as-new {:batch-number (inc batch-number)
+                          :processed-count new-count})
+      {:total-processed new-count})))
+```
+
+Continue-as-new accepts an optional options map to override settings for the new run:
+
+```clojure
+(w/continue-as-new params {:task-queue "different-queue"
+                           :workflow-run-timeout (Duration/ofHours 1)})
+```
+
+## Search Attributes
+
+Search attributes are indexed metadata that can be used to filter and search for Workflows in the Temporal UI and via the Visibility API.
+
+### Setting Search Attributes at Start
+
+You can set search attributes when starting a Workflow:
+
+```clojure
+(c/create-workflow client my-workflow {:task-queue task-queue
+                                       :search-attributes {"CustomerId" "12345"}})
+```
+
+### Upserting Search Attributes
+
+To update search attributes during Workflow execution, use [temporal.workflow/upsert-search-attributes](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#upsert-search-attributes):
+
+```clojure
+(require '[temporal.workflow :as w])
+
+(defworkflow order-workflow
+  [{:keys [order-id]}]
+  (w/upsert-search-attributes {"OrderStatus" {:type :keyword :value "processing"}})
+  ;; ... process order ...
+  (w/upsert-search-attributes {"OrderStatus" {:type :keyword :value "completed"}}))
+```
+
+Supported search attribute types:
+- `:text` - Full-text searchable string
+- `:keyword` - Exact-match string
+- `:int` - 64-bit integer
+- `:double` - 64-bit floating point
+- `:bool` - Boolean
+- `:datetime` - OffsetDateTime
+- `:keyword-list` - List of exact-match strings
+
+Note: Custom search attributes must be pre-registered with the Temporal server before use.

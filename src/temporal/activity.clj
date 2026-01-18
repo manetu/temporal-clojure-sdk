@@ -140,8 +140,8 @@ Arguments:
 
 (defmacro defactivity
   "
-Defines a new activity, similar to defn, expecting a 2-arity parameter list and body.  Should evaluate to something
-serializable, which will be available to the [[invoke]] caller, or to a core.async channel (See Async Mode below).
+Defines a new activity, similar to defn. Expects a 2-arity parameter list and body that evaluates to a serializable
+value (available to the [[invoke]] caller) or a core.async channel (see Async Mode below).
 
 #### Async Mode:
 Returning a core.async channel places the activity into

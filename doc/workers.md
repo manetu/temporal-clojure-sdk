@@ -50,3 +50,27 @@ All visible defworkflow/defactivity functions are registered automatically, by d
 ```
 
 The Temporal Server adds a new task to the Workflows / Activity Task Queue whenever you start a Workflow or when a Workflow needs to invoke an Activity.  Any Worker polling that Task Queue that has the requested Workflow / Activity registered can pick up the new task and execute it.
+
+## Automatic Poller Scaling
+
+By default, Workers use a fixed number of pollers for each task type.  You can configure Workers to automatically scale the number of concurrent polls based on load using the poller behavior options:
+
+```clojure
+(worker/start client {:task-queue task-queue
+                      :workflow-task-pollers-behavior :autoscaling
+                      :activity-task-pollers-behavior :autoscaling
+                      :nexus-task-pollers-behavior :autoscaling})
+```
+
+When autoscaling is enabled, you can expect:
+- Fewer unnecessary polls during low load
+- Increased polls during high load for better throughput
+
+You can also customize the min/max bounds:
+
+```clojure
+(worker/start client {:task-queue task-queue
+                      :activity-task-pollers-behavior {:type :autoscaling
+                                                       :min-pollers 2
+                                                       :max-pollers 10}})
+```
