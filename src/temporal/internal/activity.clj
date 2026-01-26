@@ -106,7 +106,7 @@
 
 (defn- -execute
   [ctx dispatch args]
-  (let [{:keys [activity-type activity-id] :as info} (get-info)
+  (let [{:keys [activity-type activity-id] :as _info} (get-info)
         f (u/find-dispatch-fn dispatch activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)

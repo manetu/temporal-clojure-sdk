@@ -35,7 +35,7 @@
   (d/datafy x))
 
 (defn- ^:no-doc ->payload
-  [{:keys [metadata data] :as payload}]
+  [{:keys [metadata data] :as _payload}]
   (let [builder (Payload/newBuilder)]
     (run! (fn [[k v]] (.putMetadata builder k (ByteString/copyFrom (bytes v)))) metadata)
     (when (some? data)

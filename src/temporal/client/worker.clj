@@ -184,5 +184,5 @@ Arguments:
    (stop instance))
 ```
 "
-  [{:keys [^WorkerFactory factory] :as instance}]
+  [{:keys [^WorkerFactory factory] :as _instance}]
   (.shutdown factory))
