@@ -23,7 +23,8 @@
 
 (defn ^:no-doc test-env-options->
   ^TestEnvironmentOptions [params]
-  (u/build (TestEnvironmentOptions/newBuilder) test-env-options params))
+  (->> (merge {:workflow-client-options nil} params)
+       (u/build (TestEnvironmentOptions/newBuilder) test-env-options)))
 
 (defn create
   "
@@ -47,7 +48,8 @@ Arguments:
 
 "
   ([]
-   (TestWorkflowEnvironment/newInstance))
+   (create {}))
+
   ([options]
    (TestWorkflowEnvironment/newInstance (test-env-options-> options))))
 
@@ -67,7 +69,8 @@ Arguments:
 ```
 "
   [env {:keys [task-queue] :as options}]
-  (let [worker (.newWorker env (u/namify task-queue) (worker/worker-options-> options))]
+  (let [options (dissoc options :task-queue)
+        worker (.newWorker env (u/namify task-queue) (worker/worker-options-> options))]
     (worker/init worker options)
     (.start env)
     worker))

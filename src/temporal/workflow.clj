@@ -3,15 +3,14 @@
 (ns temporal.workflow
   "Methods for defining and implementing Temporal workflows"
   (:require
-   [taoensso.nippy :as nippy]
-   [taoensso.timbre :as log]
    [promesa.core :as p]
+   [taoensso.timbre :as log]
    [temporal.common :as common]
+   [temporal.internal.child-workflow :as cw]
    [temporal.internal.exceptions :as e]
    [temporal.internal.search-attributes :as sa]
    [temporal.internal.utils :as u]
-   [temporal.internal.workflow :as w]
-   [temporal.internal.child-workflow :as cw])
+   [temporal.internal.workflow :as w])
   (:import [io.temporal.api.common.v1 WorkflowExecution]
            [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
            [java.util.function Supplier]
@@ -79,8 +78,7 @@ Arguments:
        (let [query-type (keyword query-type)
              args (u/->args args)]
          (log/trace "handling query->" "query-type:" query-type "args:" args)
-         (-> (f query-type args)
-             (nippy/freeze)))))))
+         (f query-type args))))))
 
 (defn register-update-handler!
   "
@@ -138,8 +136,7 @@ if the update request is invalid. Validators must not mutate state or perform bl
         (let [update-type (keyword update-type)
               args (u/->args args)]
           (log/trace "handling update->" "update-type:" update-type "args:" args)
-          (-> (f update-type args)
-              (nippy/freeze))))
+          (f update-type args)))
       (handleValidate [_ update-type args]
         (when validator
           (let [update-type (keyword update-type)

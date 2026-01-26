@@ -4,10 +4,11 @@
   "Methods for managing codecs between a client and the Temporal backend"
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
-            [medley.core :as m])
-  (:import [io.temporal.common.converter DefaultDataConverter CodecDataConverter]
+            [medley.core :as m]
+            [temporal.converter.default :as default-data-converter])
+  (:import [io.temporal.api.common.v1 Payload]
+           [io.temporal.common.converter CodecDataConverter]
            [io.temporal.payload.codec PayloadCodec]
-           [io.temporal.api.common.v1 Payload]
            [io.temporal.shaded.com.google.protobuf ByteString]
            [java.util Collections]))
 
@@ -59,12 +60,17 @@
 (defn create
   "Creates an instance of a [DataConverter](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DataConverter.html)
   that accepts a [[Codec]]"
-  ^CodecDataConverter [codec]
-  (CodecDataConverter.
-   (DefaultDataConverter/newDefaultInstance)
-   (Collections/singletonList
-    (reify PayloadCodec
-      (encode [_ payloads]
-        (-encode codec payloads))
-      (decode [_ payloads]
-        (-decode codec payloads))))))
+  ^CodecDataConverter
+  ([codec]
+   (create (default-data-converter/create) codec))
+
+  ^CodecDataConverter
+  ([data-converter codec]
+   (CodecDataConverter.
+    data-converter
+    (Collections/singletonList
+     (reify PayloadCodec
+       (encode [_ payloads]
+         (-encode codec payloads))
+       (decode [_ payloads]
+         (-decode codec payloads)))))))

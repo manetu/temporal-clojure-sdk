@@ -2,15 +2,19 @@
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
-  (:require [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
-            [promesa.core :as p]
+  (:require [promesa.core :as p]
+            [taoensso.timbre :as log]
             [temporal.client.options :as copts]
-            [temporal.internal.workflow :as w]
+            [temporal.internal.exceptions :as e]
             [temporal.internal.utils :as u]
-            [temporal.internal.exceptions :as e])
-  (:import [java.time Duration]
-           [io.temporal.client WorkflowClient WorkflowStub WorkflowUpdateHandle WorkflowUpdateStage UpdateOptions]))
+            [temporal.internal.workflow :as w])
+  (:import [io.temporal.client
+            UpdateOptions
+            WorkflowClient
+            WorkflowStub
+            WorkflowUpdateHandle
+            WorkflowUpdateStage]
+           [java.time Duration]))
 
 (defn- ^:no-doc create-client*
   [service-stub options]
@@ -93,6 +97,7 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
    (let [stub    (.newUntypedWorkflowStub client (u/namify workflow-id))]
      (log/trace "create-workflow id:" workflow-id)
      {:client client :stub stub}))
+
   ([^WorkflowClient client workflow options]
    (let [wf-name (w/get-annotated-name workflow)
          options (w/wf-options-> options)
@@ -100,11 +105,14 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
      (log/trace "create-workflow:" wf-name options)
      {:client client :stub stub})))
 
+(defn encode [^WorkflowClient client value]
+  (.. client (getOptions) (getDataConverter) (toPayloads (into-array Object value))))
+
 (defn start
   "
 Starts 'worklow' with 'params'"
-  [{:keys [^WorkflowStub stub] :as workflow} params]
-  (log/trace "start:" params)
+  [{:keys [^WorkflowStub stub ^WorkflowClient client] :as workflow} params]
+  (log/trace "start:" params "client:" client)
   (.start stub (u/->objarray params)))
 
 (defn signal-with-start
@@ -159,9 +167,10 @@ defworkflow once the workflow concludes.
    @(get-result w))
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow}]
-  (-> (.getResultAsync stub u/bytes-type)
-      (p/then nippy/thaw)
+  [{:keys [^WorkflowStub stub ^WorkflowClient client] :as workflow}]
+  (log/trace "get-result client:" client "stub:" stub)
+  (-> (.getResultAsync stub Object)
+      (p/then identity)
       (p/catch e/slingshot? e/recast-stone)
       (p/catch (fn [e]
                  (log/error e)
@@ -182,8 +191,7 @@ Arguments:
 ```
 "
   [{:keys [^WorkflowStub stub] :as workflow} query-type args]
-  (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))
-      (nippy/thaw)))
+  (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))))
 
 (defn update
   "
@@ -207,8 +215,7 @@ Arguments:
 "
   [{:keys [^WorkflowStub stub] :as workflow} update-type args]
   (log/trace "update:" update-type args)
-  (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))
-      (nippy/thaw)))
+  (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))))
 
 (def ^:private stage->enum
   "Maps keyword stage to WorkflowUpdateStage enum"
@@ -222,7 +229,7 @@ Arguments:
   {:id (.getId handle)
    :execution (.getExecution handle)
    :result (-> (.getResultAsync handle)
-               (p/then nippy/thaw)
+               (p/then identity)
                (p/catch e/slingshot? e/recast-stone)
                (p/catch (fn [e]
                           (log/error e)

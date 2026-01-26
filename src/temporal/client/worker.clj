@@ -4,15 +4,15 @@
   "Methods for managing a Temporal worker instance"
   (:require [taoensso.timbre :as log]
             [temporal.internal.activity :as a]
-            [temporal.internal.workflow :as w]
-            [temporal.internal.utils :as u])
-  (:import [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
+            [temporal.internal.utils :as u]
+            [temporal.internal.workflow :as w])
+  (:import [io.temporal.common.interceptors WorkerInterceptor]
+           [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
            [io.temporal.worker.tuning PollerBehavior PollerBehaviorAutoscaling]
-           [temporal.internal.dispatcher DynamicWorkflowProxy]
            [io.temporal.workflow DynamicWorkflow]
-           [io.temporal.common.interceptors WorkerInterceptor]))
+           [temporal.internal.dispatcher DynamicWorkflowProxy]))
 
-(defn ^:no-doc  init
+(defn ^:no-doc init
   "
 Initializes a worker instance, suitable for real connections or unit-testing with temporal.testing.env
 "

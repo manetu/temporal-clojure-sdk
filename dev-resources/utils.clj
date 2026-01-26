@@ -3,8 +3,11 @@
             [temporal.activity :as a :refer [defactivity]]
             [temporal.client.core :as c]
             [temporal.client.worker :as worker]
+            [temporal.converter.default :as default-data-converter]
+            [temporal.converter.json :as json]
             [temporal.workflow :as w :refer [defworkflow]])
-  (:import [java.time Duration]))
+  (:import [io.temporal.common.converter NullPayloadConverter]
+           [java.time Duration]))
 
 (def default-client-options {:target "localhost:7233"
                              :namespace "default"
@@ -58,8 +61,13 @@
      (c/start workflow arguments)
      @(c/get-result workflow))))
 
+(def data-converter
+  (default-data-converter/create
+   [(NullPayloadConverter.)
+    (json/create)]))
+
 (comment
-  (let [client (create-temporal-client)
+  (let [client (create-temporal-client {:data-converter data-converter})
         worker (create-temporal-worker client)]
     (try
       (execute-workflow client user-parent-workflow {:names ["Hanna" "Bob" "Tracy" "Felix"]})
