@@ -2,6 +2,7 @@
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
+  (:refer-clojure :exclude [update])
   (:require [promesa.core :as p]
             [taoensso.timbre :as log]
             [temporal.client.options :as copts]
