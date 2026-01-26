@@ -1,4 +1,5 @@
 (ns temporal.converter.metadata
+  (:refer-clojure :exclude [empty])
   (:require
    [temporal.converter.byte-string :refer [->byte-string byte-string?]])
   (:import

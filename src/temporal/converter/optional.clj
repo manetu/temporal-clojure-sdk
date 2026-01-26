@@ -1,4 +1,5 @@
 (ns temporal.converter.optional
+  (:refer-clojure :exclude [empty])
   (:import
    [java.util Optional]))
 
