@@ -7,7 +7,7 @@
             [temporal.client.core :as c])
   (:import [java.time Duration]))
 
-(log/set-level! :trace)
+(log/set-min-level! :trace)
 
 ;;-----------------------------------------------------------------------------
 ;; Data

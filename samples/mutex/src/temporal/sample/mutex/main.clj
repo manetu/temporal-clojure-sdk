@@ -3,7 +3,7 @@
             [temporal.sample.mutex.core :as core])
   (:gen-class))
 
-(log/set-level! :info)
+(log/set-min-level! :info)
 
 (defn -main
   [& args]
