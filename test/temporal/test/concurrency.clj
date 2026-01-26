@@ -102,7 +102,7 @@
        (p/then (fn [r] (log/info "r:" r) r))))
 
 (deftest child-workflow-concurrency-test
-  (testing "Using a child workflow instead of an ctivity works with the promise api"
+  (testing "Using a child workflow instead of an activity works with the promise api"
     (let [workflow (t/create-workflow concurrent-parent-workflow)]
       (c/start workflow {})
       (is (-> workflow c/get-result deref count (= 10)))
