@@ -7,13 +7,14 @@
   (->byte-string ^ByteString [value]))
 
 (extend-protocol ToByteString
+  ;; byte/1 - FIXME: this is not supported by lein-cloverage
+  (Class/forName "[B")
+  (->byte-string [value]
+    (ByteString/copyFrom value))
+
   nil
   (->byte-string [_]
     ByteString/EMPTY)
-
-  byte/1
-  (->byte-string [value]
-    (ByteString/copyFrom value))
 
   String
   (->byte-string [value]
