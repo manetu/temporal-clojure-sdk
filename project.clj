@@ -18,6 +18,7 @@
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
                  [funcool/promesa "11.0.678"]
+                 [metosin/jsonista "0.3.13"]
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]]
   :repl-options {:init-ns user}
