@@ -5,7 +5,7 @@
             :url "https://www.apache.org/licenses/LICENSE-2.0"
             :year 2023
             :key "apache-2.0"}
-  :plugins [[lein-cljfmt "0.9.0"]
+  :plugins [[dev.weavejester/lein-cljfmt "0.15.6"]
             [lein-kibit "0.1.8"]
             [lein-bikeshed "0.5.2"]
             [lein-cloverage "1.2.4"]
