@@ -35,11 +35,11 @@ along with the Activity Task for the next retry attempt and can be extracted by 
   []
 
   (let [ctx (Activity/getExecutionContext)
-        details (.getHeartbeatDetails ctx u/bytes-type)]
-    (let [v (when (.isPresent details)
-              (.get details))]
-      (log/trace "get-heartbeat-details:" v)
-      v)))
+        details (.getHeartbeatDetails ctx u/bytes-type)
+        v (when (.isPresent details)
+            (.get details))]
+    (log/trace "get-heartbeat-details:" v)
+    v))
 
 (defn get-info
   "Returns information about the Activity execution"
