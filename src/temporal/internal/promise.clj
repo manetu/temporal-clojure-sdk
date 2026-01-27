@@ -53,7 +53,7 @@
   (-fmap
     ([it f]
      (pt/-promise (.thenApply ^Promise (.p it) (->Func (comp ->temporal f)))))
-    ([it f executor]
+    ([it f _executor]
      (pt/-fmap it f)))
 
   ;; -mcat: Monadic bind with one-level flatten
@@ -61,21 +61,21 @@
   (-mcat
     ([it f]
      (pt/-promise (.thenCompose ^Promise (.p it) (->Func (comp ->temporal f)))))
-    ([it f executor]
+    ([it f _executor]
      (pt/-mcat it f)))
 
   ;; -then: Apply with multi-level flatten (same as v9)
   (-then
     ([it f]
      (pt/-promise (.thenCompose ^Promise (.p it) (->Func (comp ->temporal f)))))
-    ([it f executor]
+    ([it f _executor]
      (pt/-then it f)))
 
   ;; -merr: Error mapping with flatten
   ;; Combines old v9 -mapErr and -thenErr behavior
   (-merr
     ([it f]
-     (letfn [(handler [v e]
+     (letfn [(handler [_v e]
                (if e
                  (let [cause (if (instance? Promise e)
                                (.getFailure e)
@@ -86,7 +86,7 @@
          (.handle $$ (->Func handler))
          (.thenCompose $$ fw-identity)
          (pt/-promise $$))))
-    ([it f executor]
+    ([it f _executor]
      (pt/-merr it f)))
 
   ;; -hmap: Handle both success and failure
@@ -97,7 +97,7 @@
        (.handle $$ (->Func (comp ->temporal f)))
        (.thenCompose $$ fw-identity)
        (pt/-promise $$)))
-    ([it f executor]
+    ([it f _executor]
      (pt/-hmap it f)))
 
   ;; -fnly: Finally handler (return value ignored)
@@ -108,7 +108,7 @@
        (.handle $$ (->Func (fn [v e] (f v e) (if e (throw e) v))))
        (.thenCompose $$ fw-identity)
        (pt/-promise $$)))
-    ([it f executor]
+    ([it f _executor]
      (pt/-fnly it f))))
 
 (extend-protocol pt/IPromiseFactory

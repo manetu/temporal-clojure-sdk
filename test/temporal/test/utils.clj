@@ -2,12 +2,17 @@
 
 (ns temporal.test.utils
   "Utilities common to all tests"
-  (:require [taoensso.timbre :as log]
-            [temporal.testing.env :as e]
-            [temporal.client.core :as c])
-  (:import [java.time Duration]))
+  (:require
+   [taoensso.timbre :as log]
+   [temporal.client.core :as c]
+   [temporal.converter.default :as default-data-converter]
+   [temporal.converter.json :as json]
+   [temporal.testing.env :as e])
+  (:import
+   [io.temporal.common.converter NullPayloadConverter]
+   [java.time Duration]))
 
-(log/set-level! :trace)
+(log/set-min-level! :trace)
 
 ;;-----------------------------------------------------------------------------
 ;; Data
@@ -31,14 +36,19 @@
 ;;-----------------------------------------------------------------------------
 ;; Fixtures
 ;;-----------------------------------------------------------------------------
-(defn create-service []
-  (let [env    (e/create)
-        client (e/get-client env)
-        worker (e/start env {:task-queue task-queue})]
-    (swap! state assoc
-           :env env
-           :worker worker
-           :client client)))
+(defn create-service
+  ([]
+   (create-service {}))
+
+  ([options]
+   (let [env     (e/create {:workflow-client-options options})
+         client  (e/get-client env)
+         worker  (e/start env {:task-queue task-queue})]
+     (log/trace "options:" (.getOptions client))
+     (swap! state assoc
+            :env env
+            :worker worker
+            :client client))))
 
 (defn destroy-service []
   (swap! state
@@ -46,7 +56,12 @@
            (e/synchronized-stop env)
            (dissoc s :env :worker :client))))
 
+(def data-converter
+  (default-data-converter/create
+   [(NullPayloadConverter.)
+    (json/create)]))
+
 (defn wrap-service [test-fn]
-  (create-service)
+  (create-service #_{:data-converter data-converter})
   (test-fn)
   (destroy-service))

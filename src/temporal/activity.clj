@@ -2,13 +2,12 @@
 
 (ns temporal.activity
   "Methods for defining and invoking activity tasks"
-  (:require [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
-            [promesa.core :as p]
-            [temporal.internal.exceptions :as e]
+  (:require [promesa.core :as p]
+            [taoensso.timbre :as log]
             [temporal.internal.activity :as a]
-            [temporal.internal.utils :as u]
-            [temporal.internal.promise])                    ;; needed for IPromise protocol extention
+            [temporal.internal.exceptions :as e]
+            [temporal.internal.promise] ;; needed for IPromise protocol extention
+            [temporal.internal.utils :as u])
   (:import [io.temporal.workflow Workflow]
            [io.temporal.activity Activity]))
 
@@ -23,7 +22,7 @@ Arguments:
   [details]
   (let [ctx (Activity/getExecutionContext)]
     (log/trace "heartbeat:" details)
-    (.heartbeat ctx (nippy/freeze details))))
+    (.heartbeat ctx details)))
 
 (defn get-heartbeat-details
   "
@@ -36,11 +35,11 @@ along with the Activity Task for the next retry attempt and can be extracted by 
   []
 
   (let [ctx (Activity/getExecutionContext)
-        details (.getHeartbeatDetails ctx u/bytes-type)]
-    (let [v (when (.isPresent details)
-              (nippy/thaw (.get details)))]
-      (log/trace "get-heartbeat-details:" v)
-      v)))
+        details (.getHeartbeatDetails ctx u/bytes-type)
+        v (when (.isPresent details)
+            (.get details))]
+    (log/trace "get-heartbeat-details:" v)
+    v))
 
 (defn get-info
   "Returns information about the Activity execution"

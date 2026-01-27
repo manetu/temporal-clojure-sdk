@@ -1,15 +1,14 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns ^:no-doc temporal.internal.activity
-  (:require [clojure.core.protocols :as p]
+  (:require [clojure.core.async :refer [<! go] :as async]
+            [clojure.core.protocols :as p]
             [clojure.datafy :as d]
-            [clojure.core.async :refer [go <!] :as async]
-            [slingshot.slingshot :refer [try+ throw+]]
+            [slingshot.slingshot :refer [try+]]
             [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
-            [temporal.internal.utils :as u]
+            [temporal.common :as common]
             [temporal.internal.exceptions :as e]
-            [temporal.common :as common])
+            [temporal.internal.utils :as u])
   (:import [java.time Duration]
            [io.temporal.internal.sync DestroyWorkflowThreadError]
            [io.temporal.activity Activity ActivityInfo DynamicActivity ActivityCancellationType]
@@ -85,7 +84,7 @@
 
 (defn- export-result [activity-id x]
   (log/trace activity-id "result:" x)
-  (nippy/freeze x))
+  x)
 
 (defmulti result-> (fn [_ r] (type r)))
 
@@ -107,7 +106,7 @@
 
 (defn- -execute
   [ctx dispatch args]
-  (let [{:keys [activity-type activity-id] :as info} (get-info)
+  (let [{:keys [activity-type activity-id] :as _info} (get-info)
         f (u/find-dispatch-fn dispatch activity-type)
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)

@@ -1,10 +1,18 @@
 (ns temporal.client.options
-  (:require [temporal.internal.utils :as u])
-  (:import [io.temporal.client WorkflowClientOptions WorkflowClientOptions$Builder]
-           [io.temporal.common.interceptors WorkflowClientInterceptorBase]
-           [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder]
-           [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]
-           [io.temporal.authorization AuthorizationTokenSupplier]))
+  (:require
+   [temporal.converter.default :as default-data-converter]
+   [temporal.internal.utils :as u])
+  (:import
+   [io.temporal.authorization AuthorizationTokenSupplier]
+   [io.temporal.client WorkflowClientOptions WorkflowClientOptions$Builder]
+   [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder]
+   [io.temporal.common.interceptors WorkflowClientInterceptorBase]
+   [io.temporal.serviceclient WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder]))
+
+(defn assoc-default-data-converter [{:keys [data-converter] :as params}]
+  (cond-> params
+    (not data-converter)
+    (assoc :data-converter (default-data-converter/create))))
 
 (def workflow-client-options
   "
@@ -25,7 +33,10 @@
 
 (defn ^:no-doc workflow-client-options->
   ^WorkflowClientOptions [params]
-  (u/build (WorkflowClientOptions/newBuilder (WorkflowClientOptions/getDefaultInstance)) workflow-client-options params))
+  (->> params
+       (assoc-default-data-converter)
+       (u/build (WorkflowClientOptions/newBuilder (WorkflowClientOptions/getDefaultInstance))
+                workflow-client-options)))
 
 (def schedule-client-options
   "
@@ -45,7 +56,10 @@
 
 (defn ^:no-doc schedule-client-options->
   ^ScheduleClientOptions [params]
-  (u/build (ScheduleClientOptions/newBuilder (ScheduleClientOptions/getDefaultInstance)) schedule-client-options params))
+  (->> params
+       (assoc-default-data-converter)
+       (u/build (ScheduleClientOptions/newBuilder (ScheduleClientOptions/getDefaultInstance))
+                schedule-client-options)))
 
 (defn ^:no-doc apikey-auth-fn->
   ^AuthorizationTokenSupplier [f]
