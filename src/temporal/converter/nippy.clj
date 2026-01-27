@@ -15,13 +15,16 @@
 (def metadata
   (->metadata binary-plain))
 
-(defn create ^PayloadConverter []
-  (reify PayloadConverter
-    (getEncodingType [_]
-      binary-plain)
+(defrecord NippyConverter []
+  PayloadConverter
+  (getEncodingType [_]
+    binary-plain)
 
-    (toData [_ value]
-      (-> value (nippy/freeze) (->payload metadata) (->optional)))
+  (toData [_ value]
+    (-> value (nippy/freeze) (->payload metadata) (->optional)))
 
-    (fromData [_ ^Payload content ^Class _value-class ^Type _value-type]
-      (-> content (.getData) (.toByteArray) (nippy/thaw)))))
+  (fromData [_ ^Payload content ^Class _value-class ^Type _value-type]
+    (-> content (.getData) (.toByteArray) (nippy/thaw))))
+
+(defn create  []
+  (NippyConverter.))

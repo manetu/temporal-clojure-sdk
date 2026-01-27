@@ -18,23 +18,26 @@
 (def default-object-mapper
   json/keyword-keys-object-mapper)
 
-(defn create ^PayloadConverter
+(defrecord JSONConverter [object-mapper]
+  PayloadConverter
+  (getEncodingType [_]
+    json-plain)
+
+  (toData [_ value]
+    (-> value
+        (json/write-value-as-bytes object-mapper)
+        (->payload metadata)
+        (->optional)))
+
+  (fromData [_ ^Payload content ^Class _value-class ^Type _value-type]
+    (-> content
+        (.getData)
+        (.toByteArray)
+        (json/read-value object-mapper))))
+
+(defn create
   ([]
    (create default-object-mapper))
 
   ([object-mapper]
-   (reify PayloadConverter
-     (getEncodingType [_]
-       json-plain)
-
-     (toData [_ value]
-       (-> value
-           (json/write-value-as-bytes object-mapper)
-           (->payload metadata)
-           (->optional)))
-
-     (fromData [_ ^Payload content ^Class _value-class ^Type _value-type]
-       (-> content
-           (.getData)
-           (.toByteArray)
-           (json/read-value object-mapper))))))
+   (JSONConverter. object-mapper)))
