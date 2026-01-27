@@ -44,8 +44,8 @@
         wf (c/create-workflow client versioned-workflow {:task-queue t/task-queue :workflow-id "test-1"})]
     (testing "Invoke our v1 workflow"
       (c/start wf {})
-      (is (= @(c/get-result wf) :v1))
-      (is (= @mailbox :v1)))
+      (is (= :v1 @(c/get-result wf)))
+      (is (= :v1 @mailbox)))
     (with-mock _
       {:target ::workflow-v1
        :return workflow-v2}                               ;; emulates a code update by dynamically substituting v2 for v1
@@ -53,10 +53,10 @@
         (reset! mailbox :slug)
         (let [history (.fetchHistory client "test-1")]
           (.replayWorkflowExecution worker history))
-        (is (= @mailbox :slug)))                            ;; activity is not re-executed in replay, so the :slug should remain
+        (is (= :slug @mailbox)))                            ;; activity is not re-executed in replay, so the :slug should remain
       (testing "Invoke our workflow fresh and verify that it takes the v2 path"
         (reset! mailbox nil)
         (let [wf2 (c/create-workflow client versioned-workflow {:task-queue t/task-queue :workflow-id "test-2"})]
           (c/start wf2 {})
-          (is (= @(c/get-result wf2) :v2))
-          (is (= @mailbox :v2)))))))
+          (is (= :v2 @(c/get-result wf2)))
+          (is (= :v2 @mailbox)))))))
