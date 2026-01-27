@@ -28,25 +28,25 @@
 
 (def ^Field serialization-context-field (get-field "serializationContext"))
 
+(defn get-converter [^PayloadAndFailureDataConverter data-converter encoding]
+  (let [converters-map (.get converters-map-field data-converter)
+        converter (.get ^Map converters-map encoding)]
+    (when converter
+      (if-let [serialization-context (get serialization-context-field data-converter)]
+        (.withContext ^PayloadConverter converter serialization-context)
+        converter))))
+
 (defn encoded->payload
   "This is a custom re-implementation of the PayloadAndFailureDataConverter/toPayload"
   [^PayloadAndFailureDataConverter data-converter {:keys [value encoding]}]
-  (let [converters-map (.get converters-map-field data-converter)
-        converter (.get ^Map converters-map encoding)]
-    (when-not converter
-      (throw (DataConverterException.
-              (str "No PayloadConverter is registered for this encoding: " encoding))))
-
-    (let [serialization-context (get serialization-context-field data-converter)
-          converter (if serialization-context
-                      (.withContext ^PayloadConverter converter serialization-context)
-                      converter)
-          result (.toData ^PayloadConverter converter value)]
-      (when-not (.isPresent result)
+  (if-let [converter (get-converter data-converter encoding)]
+    (let [result (.toData ^PayloadConverter converter value)]
+      (if (.isPresent result)
+        result
         (throw (DataConverterException.
-                (str "Cannot encode value with the selected converter:" value))))
-
-      result)))
+                (str "Cannot encode value with the selected converter: " value)))))
+    (throw (DataConverterException.
+            (str "No PayloadConverter is registered for this encoding: " encoding)))))
 
 (defn create
   (^DefaultDataConverter []
