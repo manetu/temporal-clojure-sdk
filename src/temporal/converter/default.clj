@@ -24,7 +24,11 @@
   (doto (.getDeclaredField PayloadAndFailureDataConverter field)
     (.setAccessible true)))
 
+(def ^Field converters-field (get-field "converters"))
+
 (def ^Field converters-map-field (get-field "convertersMap"))
+
+(def ^Field failure-converter-field (get-field "failureConverter"))
 
 (def ^Field serialization-context-field (get-field "serializationContext"))
 
@@ -52,8 +56,20 @@
   (^DefaultDataConverter []
    (create standard-converters))
 
+  (^DefaultDataConverter [converters source-data-converter]
+   (let [data-converter (create converters)]
+     (doseq [^Field field [converters-field converters-map-field failure-converter-field]]
+       (->> (.get field source-data-converter)
+            (.set field data-converter)))
+     data-converter))
+
   (^DefaultDataConverter [converters]
    (proxy [DefaultDataConverter] [(into-array PayloadConverter converters)]
+     (withContext [context]
+       (let [data-converter (create converters this)]
+         (.set serialization-context-field data-converter context)
+         data-converter))
+
      (toPayload [value]
        (let [^PayloadAndFailureDataConverter this this]
          (if (encoding/tagged? value)
