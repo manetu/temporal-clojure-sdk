@@ -14,7 +14,8 @@
   (:import [io.temporal.api.common.v1 WorkflowExecution]
            [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
            [java.util.function Supplier]
-           [java.time Duration]))
+           [java.time Duration])
+  (:refer-clojure :exclude [await]))
 
 (defn get-info
   "Return info about the current workflow"
