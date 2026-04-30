@@ -99,4 +99,4 @@
     (->payload-json "[1,2,3,4]")
 
     "Raw JSON string"
-    (->payload-json "\"Raw JSON string\"\"")))
+    (->payload-json "\"Raw JSON string\"")))
