@@ -106,9 +106,6 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
      (log/trace "create-workflow:" wf-name options)
      {:client client :stub stub})))
 
-(defn encode [^WorkflowClient client value]
-  (.. client (getOptions) (getDataConverter) (toPayloads (into-array u/object-type value))))
-
 (defn start
   "
 Starts 'worklow' with 'params'"
