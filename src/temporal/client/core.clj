@@ -168,7 +168,6 @@ defworkflow once the workflow concludes.
   [{:keys [^WorkflowStub stub ^WorkflowClient client] :as _workflow}]
   (log/trace "get-result client:" client "stub:" stub)
   (-> (.getResultAsync stub u/object-type)
-      (p/then identity)
       (p/catch e/slingshot? e/recast-stone)
       (p/catch (fn [e]
                  (log/error e)
@@ -227,7 +226,6 @@ Arguments:
   {:id (.getId handle)
    :execution (.getExecution handle)
    :result (-> (.getResultAsync handle)
-               (p/then identity)
                (p/catch e/slingshot? e/recast-stone)
                (p/catch (fn [e]
                           (log/error e)
