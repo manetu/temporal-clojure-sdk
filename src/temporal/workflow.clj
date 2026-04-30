@@ -169,17 +169,23 @@ Arguments:
     (if (= (count params*) 2)                               ;; legacy
       (do
         (println (str *file* ":" (:line (meta &form)) " WARN: (defworkflow " name ") with [ctx {:keys [signals args]}] is deprecated.  Use [args] form."))
-        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn :type :legacy}}
-           (fn [ctx# args#]
-             (log/trace (str ~fqn ": ") args#)
-             (let [f# (fn ~params* (do ~@body))]
-               (f# ctx# args#)))))
+        `(def ~name
+           (with-meta
+             (fn [ctx# args#]
+               (log/trace (str ~fqn ": ") args#)
+               (let [f# (fn ~params* (do ~@body))]
+                 (f# ctx# args#)))
+             {::w/def {:name ~sname :fqn ~fqn :type :legacy}
+              ::u/var (var ~name)})))
       (do
-        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn}}
-           (fn [args#]
-             (log/trace (str ~fqn ": ") args#)
-             (let [f# (fn ~params* (do ~@body))]
-               (f# args#))))))))
+        `(def ~name
+           (with-meta
+             (fn [args#]
+               (log/trace (str ~fqn ": ") args#)
+               (let [f# (fn ~params* (do ~@body))]
+                 (f# args#)))
+             {::w/def {:name ~sname :fqn ~fqn}
+              ::u/var (var ~name)}))))))
 
 (defn invoke
   "

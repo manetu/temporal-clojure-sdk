@@ -85,19 +85,23 @@
   (u/get-annotated-name x ::def))
 
 (defn auto-dispatch
-  []
-  (u/get-annotated-fns ::def))
+  ([]
+   (auto-dispatch {}))
+  ([opts]
+   (u/get-annotated-fns ::def opts)))
 
 (defn import-dispatch
-  [syms]
-  (u/import-dispatch ::def syms))
+  ([syms]
+   (import-dispatch syms {}))
+  ([syms opts]
+   (u/import-dispatch ::def syms opts)))
 
 (defn execute
   [ctx dispatch args]
   (let [{:keys [workflow-type workflow-id]} (get-info)]
     (try+
-     (let [d (u/find-dispatch dispatch workflow-type)
-           f (:fn d)
+     (let [d (u/resolve-dispatch ::def (u/find-dispatch dispatch workflow-type))
+           f (u/resolve-dispatch-fn d)
            a (u/->args args)
            _ (log/trace workflow-id "calling" f "with args:" a)
            r (if (-> d :type (= :legacy))

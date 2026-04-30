@@ -41,14 +41,16 @@
 
 (defn find-annotated-fns
   "Finds all instances of functions annotated with 'marker' via metadata and returns a [name fn] map"
-  [marker]
-  (->> (all-ns)
-       (mapcat (comp vals ns-interns ns-name))
-       (reduce (fn [acc x]
-                 (let [v (var-get x)
-                       m (get-annotation v marker)]
-                   (cond-> acc
-                     (some? m) (conj (assoc m :fn v))))) [])))
+  ([marker]
+   (find-annotated-fns marker {}))
+  ([marker {:keys [hot-reload?] :or {hot-reload? false}}]
+   (->> (all-ns)
+        (mapcat (comp vals ns-interns ns-name))
+        (reduce (fn [acc x]
+                  (let [v (var-get x)
+                        m (get-annotation v marker)]
+                    (cond-> acc
+                      (some? m) (conj (assoc m (if hot-reload? :var :fn) (if hot-reload? x v)))))) []))))
 
 (defn frequencies-by
   "a generalized version of frequencies"
@@ -70,10 +72,12 @@
         (throw (ex-info "conflict detected: All temporal workflows and activities must be uniquely named" {:conflicts data}))))))
 
 (defn get-annotated-fns
-  [marker]
-  (let [data (find-annotated-fns marker)]
-    (verify-registered-fns data)
-    (m/index-by :name data)))
+  ([marker]
+   (get-annotated-fns marker {}))
+  ([marker opts]
+   (let [data (find-annotated-fns marker opts)]
+     (verify-registered-fns data)
+     (m/index-by :name data))))
 
 (defn find-dispatch
   "Finds any dispatch descriptor named 't' that carry metadata 'marker'"
@@ -81,18 +85,50 @@
   (or (get dispatch-table t)
       (throw (ex-info "workflow/activity not found" {:function t}))))
 
+(defn resolve-dispatch-fn
+  "Resolves a dispatch entry to the current function value. If the entry stores a
+  Var, dereferences it at execution time so re-evaluated definitions are picked up."
+  [entry]
+  (if-let [v (:var entry)]
+    @v
+    (:fn entry)))
+
+(defn resolve-dispatch
+  "Resolves a dispatch entry, refreshing marker metadata from the current Var value
+  when possible. This keeps workflow metadata such as :type in sync during hot reload."
+  [marker entry]
+  (if-let [v (:var entry)]
+    (let [f @v]
+      (if-let [m (get-annotation f marker)]
+        (assoc m :var v :fn f)
+        (assoc entry :fn f)))
+    entry))
+
 (defn find-dispatch-fn
   "Finds any functions named 't' that carry metadata 'marker'"
   [dispatch-table t]
-  (:fn (find-dispatch dispatch-table t)))
+  (resolve-dispatch-fn (find-dispatch dispatch-table t)))
+
+(defn- dispatch-entry
+  [marker x hot-reload?]
+  (let [f (if (var? x) @x x)
+        {:keys [name] :as m} (get-annotation f marker)
+        v (or (when (var? x) x) (::var (meta f)))]
+    (when-not name
+      (throw (ex-info "bad symbol" {:message (str x " does not appear to be a valid symbol")})))
+    (if (and hot-reload? v)
+      (assoc m :var v)
+      (assoc m :fn f))))
 
 (defn import-dispatch
-  [marker coll]
-  (reduce (fn [acc s]
-            (let [{:keys [name] :as x} (get-annotation s marker)]
-              (assoc acc name (assoc x :fn s))))
-          {}
-          coll))
+  ([marker coll]
+   (import-dispatch marker coll {}))
+  ([marker coll {:keys [hot-reload?] :or {hot-reload? false}}]
+   (reduce (fn [acc s]
+             (let [{:keys [name] :as x} (dispatch-entry marker s hot-reload?)]
+               (assoc acc name x)))
+           {}
+           coll)))
 
 (defn get-fq-classname
   "Returns the fully qualified classname for 'sym'"

@@ -163,8 +163,11 @@ Arguments:
   [name params* & body]
   (let [fqn (u/get-fq-classname name)
         sname (str name)]
-    `(def ~name ^{::a/def {:name ~sname :fqn ~fqn}}
-       (fn [ctx# args#]
-         (log/trace (str ~fqn ": ") args#)
-         (let [f# (fn ~params* (do ~@body))]
-           (f# ctx# args#))))))
+    `(def ~name
+       (with-meta
+         (fn [ctx# args#]
+           (log/trace (str ~fqn ": ") args#)
+           (let [f# (fn ~params* (do ~@body))]
+             (f# ctx# args#)))
+         {::a/def {:name ~sname :fqn ~fqn}
+          ::u/var (var ~name)}))))

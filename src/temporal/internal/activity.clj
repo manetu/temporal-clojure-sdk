@@ -75,12 +75,16 @@
   (u/get-annotated-name x ::def))
 
 (defn auto-dispatch
-  []
-  (u/get-annotated-fns ::def))
+  ([]
+   (auto-dispatch {}))
+  ([opts]
+   (u/get-annotated-fns ::def opts)))
 
 (defn import-dispatch
-  [syms]
-  (u/import-dispatch ::def syms))
+  ([syms]
+   (import-dispatch syms {}))
+  ([syms opts]
+   (u/import-dispatch ::def syms opts)))
 
 (defn- export-result [activity-id x]
   (log/trace activity-id "result:" x)
@@ -107,7 +111,7 @@
 (defn- -execute
   [ctx dispatch args]
   (let [{:keys [activity-type activity-id] :as _info} (get-info)
-        f (u/find-dispatch-fn dispatch activity-type)
+        f (u/resolve-dispatch-fn (u/find-dispatch dispatch activity-type))
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
     (try+

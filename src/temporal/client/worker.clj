@@ -16,10 +16,14 @@
   "
 Initializes a worker instance, suitable for real connections or unit-testing with temporal.testing.env
 "
-  [^Worker worker {:keys [ctx] {:keys [activities workflows] :as dispatch} :dispatch}]
-  (let [dispatch (if (nil? dispatch)
-                   {:activities (a/auto-dispatch) :workflows (w/auto-dispatch)}
-                   {:activities (a/import-dispatch activities) :workflows (w/import-dispatch workflows)})]
+  [^Worker worker {:keys [ctx hot-reload-activities? hot-reload-workflows?] {:keys [activities workflows] :as dispatch} :dispatch}]
+  (let [activity-dispatch-opts {:hot-reload? hot-reload-activities?}
+        workflow-dispatch-opts {:hot-reload? hot-reload-workflows?}
+        dispatch (if (nil? dispatch)
+                   {:activities (a/auto-dispatch activity-dispatch-opts)
+                    :workflows  (w/auto-dispatch workflow-dispatch-opts)}
+                   {:activities (a/import-dispatch activities activity-dispatch-opts)
+                    :workflows  (w/import-dispatch workflows workflow-dispatch-opts)})]
     (log/trace "init:" dispatch)
     (.registerActivitiesImplementations worker (to-array [(a/dispatcher ctx (:activities dispatch))]))
     (.registerWorkflowImplementationFactory worker DynamicWorkflowProxy
@@ -83,6 +87,8 @@ Options for configuring workers (See [[start]])
 | :task-queue                                     | y         | The name of the task-queue for this worker instance to listen on.                                                                                                                                                                                 | String / keyword                                                               |                                                             |
 | :ctx                                            |           | An opaque handle that is passed back as the first argument of [[temporal.workflow/defworkflow]] and [[temporal.activity/defactivity]], useful for passing state such as database or network connections.                                          | <any>                                                                          | nil                                                         |
 | :dispatch                                       |           | An optional map explicitly setting the dispatch table                                                                                                                                                                                             | See below                                                                      | All visible activities/workers are automatically registered |
+| :hot-reload-activities?                         |           | When true, stores activity Vars in the dispatch table and dereferences them at execution time. Intended for development / REPL use.                                                                                                               | boolean                                                                        | false                                                       |
+| :hot-reload-workflows?                          |           | When true, stores workflow Vars in the dispatch table and dereferences them at execution time. Development-only; changing workflow code can break Temporal replay determinism.                                                                     | boolean                                                                        | false                                                       |
 | :default-deadlock-detection-timeout             |           | Time period in ms that will be used to detect workflow deadlock.                                                                                                                                                                                  | long                                                                           | 1000                                                        |
 | :default-heartbeat-throttle-interval            |           | Default amount of time between sending each pending heartbeat.                                                                                                                                                                                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 30s                                                         |
 | :local-activity-worker-only                     |           | Worker should only handle workflow tasks and local activities.                                                                                                                                                                                    | boolean                                                                        | false                                                       |
