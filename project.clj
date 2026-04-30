@@ -30,6 +30,7 @@
   :codox {:metadata {:doc/format :markdown}}
 
   :profiles {:dev {:dependencies   [[org.clojure/tools.namespace "1.5.1"]
+                                    [criterium "0.4.6"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
                                     [io.temporal/temporal-opentracing "1.32.1"]]

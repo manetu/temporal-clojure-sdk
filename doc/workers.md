@@ -51,6 +51,25 @@ All visible defworkflow/defactivity functions are registered automatically, by d
 
 The Temporal Server adds a new task to the Workflows / Activity Task Queue whenever you start a Workflow or when a Workflow needs to invoke an Activity.  Any Worker polling that Task Queue that has the requested Workflow / Activity registered can pick up the new task and execute it.
 
+## Hot reloading during development
+
+By default, Workers capture the current function values when they start. For REPL-driven development, you can opt in to resolving Vars at execution time so re-evaluated `defactivity` and `defworkflow` forms can be picked up without restarting the Worker.
+
+```clojure
+(worker/start client {:task-queue task-queue
+                      :hot-reload-activities? true})
+```
+
+Activity hot reloading is usually the safest development option. Workflow hot reloading is also available, but should be used cautiously because Temporal workflows must remain deterministic during replay:
+
+```clojure
+(worker/start client {:task-queue task-queue
+                      :hot-reload-activities? true
+                      :hot-reload-workflows? true})
+```
+
+These options default to `false` and are intended for development / REPL use, not production deployments.
+
 ## Automatic Poller Scaling
 
 By default, Workers use a fixed number of pollers for each task type.  You can configure Workers to automatically scale the number of concurrent polls based on load using the poller behavior options:
