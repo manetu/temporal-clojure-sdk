@@ -107,7 +107,7 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
      {:client client :stub stub})))
 
 (defn encode [^WorkflowClient client value]
-  (.. client (getOptions) (getDataConverter) (toPayloads (into-array Object value))))
+  (.. client (getOptions) (getDataConverter) (toPayloads (into-array u/object-type value))))
 
 (defn start
   "
@@ -170,7 +170,7 @@ defworkflow once the workflow concludes.
 "
   [{:keys [^WorkflowStub stub ^WorkflowClient client] :as _workflow}]
   (log/trace "get-result client:" client "stub:" stub)
-  (-> (.getResultAsync stub Object)
+  (-> (.getResultAsync stub u/object-type)
       (p/then identity)
       (p/catch e/slingshot? e/recast-stone)
       (p/catch (fn [e]
@@ -192,7 +192,7 @@ Arguments:
 ```
 "
   [{:keys [^WorkflowStub stub] :as _workflow} query-type args]
-  (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))))
+  (.query stub (u/namify query-type) u/object-type (u/->objarray args)))
 
 (defn update
   "
@@ -216,7 +216,7 @@ Arguments:
 "
   [{:keys [^WorkflowStub stub] :as _workflow} update-type args]
   (log/trace "update:" update-type args)
-  (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))))
+  (.update stub (u/namify update-type) u/object-type (u/->objarray args)))
 
 (def ^:private stage->enum
   "Maps keyword stage to WorkflowUpdateStage enum"
@@ -239,7 +239,7 @@ Arguments:
 (defn- build-update-options
   "Builds UpdateOptions from a Clojure map"
   [{:keys [update-name update-id wait-for-stage first-execution-run-id]}]
-  (let [builder (UpdateOptions/newBuilder u/bytes-type)]
+  (let [builder (UpdateOptions/newBuilder u/object-type)]
     (when update-name
       (.setUpdateName builder (u/namify update-name)))
     (when update-id
@@ -289,7 +289,7 @@ Returns a map with:
                     (.startUpdate stub update-options (u/->objarray args)))
                   ;; Use simple overload when no custom options needed
                   (let [stage (get stage->enum (or wait-for-stage :accepted))]
-                    (.startUpdate stub (u/namify update-type) stage u/bytes-type (u/->objarray args))))]
+                    (.startUpdate stub (u/namify update-type) stage u/object-type (u/->objarray args))))]
      (wrap-update-handle handle))))
 
 (defn get-update-handle
@@ -312,7 +312,7 @@ Returns a map with:
 "
   [{:keys [^WorkflowStub stub] :as _workflow} update-id]
   (log/trace "get-update-handle:" update-id)
-  (let [handle (.getUpdateHandle stub update-id u/bytes-type)]
+  (let [handle (.getUpdateHandle stub update-id u/object-type)]
     (wrap-update-handle handle)))
 
 (defn update-with-start

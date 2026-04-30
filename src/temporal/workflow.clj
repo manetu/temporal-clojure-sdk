@@ -246,7 +246,7 @@ Arguments:
    (let [wf-name (w/get-annotated-name workflow)
          stub (Workflow/newUntypedChildWorkflowStub wf-name (cw/child-workflow-options-> options))]
      (log/trace "invoke:" workflow "with" params options)
-     (-> (.executeAsync stub u/bytes-type (u/->objarray params))
+     (-> (.executeAsync stub u/object-type (u/->objarray params))
          (p/then (partial u/complete-invoke workflow))
          (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]

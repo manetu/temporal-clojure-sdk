@@ -35,7 +35,7 @@ along with the Activity Task for the next retry attempt and can be extracted by 
   []
 
   (let [ctx (Activity/getExecutionContext)
-        details (.getHeartbeatDetails ctx u/bytes-type)
+        details (.getHeartbeatDetails ctx u/object-type)
         v (when (.isPresent details)
             (.get details))]
     (log/trace "get-heartbeat-details:" v)
@@ -89,7 +89,7 @@ Arguments:
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedActivityStub (a/invoke-options-> options))]
      (log/trace "invoke:" activity "with" params options)
-     (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
+     (-> (.executeAsync stub act-name u/object-type (u/->objarray params))
          (p/then (partial u/complete-invoke activity))
          (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]
@@ -130,7 +130,7 @@ Arguments:
    (let [act-name (a/get-annotation activity)
          stub (Workflow/newUntypedLocalActivityStub (a/local-invoke-options-> options))]
      (log/trace "local-invoke:" activity "with" params options)
-     (-> (.executeAsync stub act-name u/bytes-type (u/->objarray params))
+     (-> (.executeAsync stub act-name u/object-type (u/->objarray params))
          (p/then (partial u/complete-invoke activity))
          (p/catch e/slingshot? e/recast-stone)
          (p/catch (fn [e]

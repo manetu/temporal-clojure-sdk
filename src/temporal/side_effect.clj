@@ -14,7 +14,7 @@
 (defn invoke
   "Invokes 'f' via a Temporal [SideEffect](https://docs.temporal.io/concepts/what-is-a-side-effect/)"
   [f]
-  (Workflow/sideEffect u/bytes-type (->Func f)))
+  (Workflow/sideEffect u/object-type (->Func f)))
 
 (defn now
   "Returns the java.time.Instant as a SideEffect"

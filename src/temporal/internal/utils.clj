@@ -14,6 +14,7 @@
             Functions$Func6]))
 
 (def ^Class bytes-type (Class/forName "[B"))
+(def ^Class object-type Object)
 
 (defn build [builder spec params]
   (log/trace "building" builder "with" params)
@@ -105,13 +106,13 @@
 (defn ->objarray
   "Serializes x to an array of Objects, suitable for many Temporal APIs"
   [x]
-  (into-array Object [x]))
+  (into-array object-type [x]))
 
 (defn ->args
   "Decodes EncodedValues to native clojure data type.  Assumes all data is in the first element"
   [^EncodedValues args]
   (log/trace "args:" args)
-  (.get args (int 0) bytes-type))
+  (.get args (int 0) object-type))
 
 (def namify
   "Converts strings or keywords to strings, preserving fully qualified keywords when applicable"
