@@ -14,6 +14,6 @@
   (and (optional? value) (.isPresent ^Optional value)))
 
 (defn ->optional [value]
-  (if value
-    (Optional/of value)
+  (if-some [v value]
+    (Optional/of v)
     empty))

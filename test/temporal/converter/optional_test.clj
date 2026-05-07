@@ -37,3 +37,9 @@
   (are [value] (not (sut/present? value))
     (Optional/empty)
     (sut/->optional nil)))
+
+(deftest ->optional-with-false
+  (let [optional (sut/->optional false)]
+    (is (instance? Optional optional))
+    (is (.isPresent optional))
+    (is (= false (.get optional)))))
