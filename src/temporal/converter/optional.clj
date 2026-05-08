@@ -13,7 +13,9 @@
 (defn present? [value]
   (and (optional? value) (.isPresent ^Optional value)))
 
-(defn ->optional [value]
-  (if-some [v value]
-    (Optional/of v)
-    empty))
+(defn ->optional
+  "Wraps a non-nil produced value in a present Optional.
+
+     Use `empty` explicitly when no value was produced."
+  [value]
+  (Optional/of value))
