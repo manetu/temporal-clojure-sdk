@@ -62,6 +62,6 @@
     (json/create)]))
 
 (defn wrap-service [test-fn]
-  (create-service #_{:data-converter data-converter})
+  (create-service)
   (test-fn)
   (destroy-service))
