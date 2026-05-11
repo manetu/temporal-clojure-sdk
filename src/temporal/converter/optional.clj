@@ -9,10 +9,6 @@
 (defn optional? [value]
   (instance? Optional value))
 
-;; NOTE: do we need this?
-(defn present? [value]
-  (and (optional? value) (.isPresent ^Optional value)))
-
 (defn ->optional
   "Wraps a non-nil produced value in a present Optional.
 

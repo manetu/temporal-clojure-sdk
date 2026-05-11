@@ -23,20 +23,6 @@
 (deftest ->optional-with-nil
   (is (thrown? NullPointerException (sut/->optional nil))))
 
-(deftest present?
-  (are [value] (sut/present? value)
-    (Optional/of "test")
-    (Optional/of :something)
-    (Optional/of [:a :b :c])
-    (sut/->optional "test")
-    (sut/->optional :something)
-    (sut/->optional [:a :b :c]))
-
-  (are [value] (not (sut/present? value))
-    (Optional/empty)
-    sut/empty
-    nil))
-
 (deftest ->optional-with-false
   (let [optional (sut/->optional false)]
     (is (instance? Optional optional))
