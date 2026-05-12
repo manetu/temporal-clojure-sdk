@@ -13,7 +13,6 @@
             Functions$Func5
             Functions$Func6]))
 
-(def ^Class bytes-type (Class/forName "[B"))
 (def ^Class object-type Object)
 
 (defn build [builder spec params]
