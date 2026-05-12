@@ -4,13 +4,12 @@
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
             [slingshot.slingshot :refer [try+]]
-            [taoensso.nippy :as nippy]
             [taoensso.timbre :as log]
             [temporal.common :as common]
             [temporal.internal.exceptions :as e]
             [temporal.internal.signals :as s]
             [temporal.internal.utils :as u])
-  (:import [io.temporal.api.enums.v1 WorkflowIdReusePolicy WorkflowIdConflictPolicy]
+  (:import [io.temporal.api.enums.v1 WorkflowIdConflictPolicy WorkflowIdReusePolicy]
            [io.temporal.client WorkflowOptions WorkflowOptions$Builder]
            [io.temporal.internal.sync DestroyWorkflowThreadError]
            [io.temporal.workflow Workflow WorkflowInfo]))
@@ -105,7 +104,7 @@
                (f ctx {:args a :signals (s/create-signal-chan)})
                (f a))]
        (log/trace workflow-id "result:" r)
-       (nippy/freeze r))
+       r)
      (catch DestroyWorkflowThreadError ex
        (log/debug workflow-id "thread evicted")
        (throw ex))

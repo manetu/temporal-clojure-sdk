@@ -2,15 +2,20 @@
 
 (ns temporal.client.core
   "Methods for client interaction with Temporal"
-  (:require [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy]
-            [promesa.core :as p]
+  (:refer-clojure :exclude [update])
+  (:require [promesa.core :as p]
+            [taoensso.timbre :as log]
             [temporal.client.options :as copts]
-            [temporal.internal.workflow :as w]
+            [temporal.internal.exceptions :as e]
             [temporal.internal.utils :as u]
-            [temporal.internal.exceptions :as e])
-  (:import [java.time Duration]
-           [io.temporal.client WorkflowClient WorkflowStub WorkflowUpdateHandle WorkflowUpdateStage UpdateOptions]))
+            [temporal.internal.workflow :as w])
+  (:import [io.temporal.client
+            UpdateOptions
+            WorkflowClient
+            WorkflowStub
+            WorkflowUpdateHandle
+            WorkflowUpdateStage]
+           [java.time Duration]))
 
 (defn- ^:no-doc create-client*
   [service-stub options]
@@ -93,6 +98,7 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
    (let [stub    (.newUntypedWorkflowStub client (u/namify workflow-id))]
      (log/trace "create-workflow id:" workflow-id)
      {:client client :stub stub}))
+
   ([^WorkflowClient client workflow options]
    (let [wf-name (w/get-annotated-name workflow)
          options (w/wf-options-> options)
@@ -103,8 +109,8 @@ Workflow ID Conflict Policies (`:workflow-id-conflict-policy`):
 (defn start
   "
 Starts 'worklow' with 'params'"
-  [{:keys [^WorkflowStub stub] :as workflow} params]
-  (log/trace "start:" params)
+  [{:keys [^WorkflowStub stub ^WorkflowClient client] :as _workflow} params]
+  (log/trace "start:" params "client:" client)
   (.start stub (u/->objarray params)))
 
 (defn signal-with-start
@@ -128,7 +134,7 @@ set `:workflow-id-conflict-policy` to `:use-existing` when calling [[create-work
   (signal-with-start w :my-signal {:data \"value\"} {:initial \"args\"}))
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} signal-name signal-params wf-params]
+  [{:keys [^WorkflowStub stub] :as _workflow} signal-name signal-params wf-params]
   (log/trace "signal-with-start->" "signal:" signal-name signal-params "workflow-params:" wf-params)
   (.signalWithStart stub (u/namify signal-name) (u/->objarray signal-params) (u/->objarray wf-params)))
 
@@ -140,7 +146,7 @@ Sends 'params' as a signal 'signal-name' to 'workflow'
 (>! workflow ::my-signal {:msg \"Hi\"})
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} signal-name params]
+  [{:keys [^WorkflowStub stub] :as _workflow} signal-name params]
   (log/trace ">!" signal-name params)
   (.signal stub (u/namify signal-name) (u/->objarray params)))
 
@@ -159,9 +165,9 @@ defworkflow once the workflow concludes.
    @(get-result w))
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow}]
-  (-> (.getResultAsync stub u/bytes-type)
-      (p/then nippy/thaw)
+  [{:keys [^WorkflowStub stub ^WorkflowClient client] :as _workflow}]
+  (log/trace "get-result client:" client "stub:" stub)
+  (-> (.getResultAsync stub u/object-type)
       (p/catch e/slingshot? e/recast-stone)
       (p/catch (fn [e]
                  (log/error e)
@@ -181,9 +187,8 @@ Arguments:
 (query workflow ::my-query {:foo \"bar\"})
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} query-type args]
-  (-> (.query stub (u/namify query-type) u/bytes-type (u/->objarray args))
-      (nippy/thaw)))
+  [{:keys [^WorkflowStub stub] :as _workflow} query-type args]
+  (.query stub (u/namify query-type) u/object-type (u/->objarray args)))
 
 (defn update
   "
@@ -205,10 +210,9 @@ Arguments:
 (update workflow :increment {:amount 5})
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} update-type args]
+  [{:keys [^WorkflowStub stub] :as _workflow} update-type args]
   (log/trace "update:" update-type args)
-  (-> (.update stub (u/namify update-type) u/bytes-type (u/->objarray args))
-      (nippy/thaw)))
+  (.update stub (u/namify update-type) u/object-type (u/->objarray args)))
 
 (def ^:private stage->enum
   "Maps keyword stage to WorkflowUpdateStage enum"
@@ -222,7 +226,6 @@ Arguments:
   {:id (.getId handle)
    :execution (.getExecution handle)
    :result (-> (.getResultAsync handle)
-               (p/then nippy/thaw)
                (p/catch e/slingshot? e/recast-stone)
                (p/catch (fn [e]
                           (log/error e)
@@ -231,7 +234,7 @@ Arguments:
 (defn- build-update-options
   "Builds UpdateOptions from a Clojure map"
   [{:keys [update-name update-id wait-for-stage first-execution-run-id]}]
-  (let [builder (UpdateOptions/newBuilder u/bytes-type)]
+  (let [builder (UpdateOptions/newBuilder u/object-type)]
     (when update-name
       (.setUpdateName builder (u/namify update-name)))
     (when update-id
@@ -271,7 +274,7 @@ Returns a map with:
 "
   ([workflow update-type args]
    (start-update workflow update-type args {}))
-  ([{:keys [^WorkflowStub stub] :as workflow} update-type args {:keys [wait-for-stage update-id] :as options}]
+  ([{:keys [^WorkflowStub stub] :as _workflow} update-type args {:keys [wait-for-stage update-id] :as options}]
    (log/trace "start-update:" update-type args options)
    (let [handle (if update-id
                   ;; Use UpdateOptions when custom update-id is specified
@@ -281,7 +284,7 @@ Returns a map with:
                     (.startUpdate stub update-options (u/->objarray args)))
                   ;; Use simple overload when no custom options needed
                   (let [stage (get stage->enum (or wait-for-stage :accepted))]
-                    (.startUpdate stub (u/namify update-type) stage u/bytes-type (u/->objarray args))))]
+                    (.startUpdate stub (u/namify update-type) stage u/object-type (u/->objarray args))))]
      (wrap-update-handle handle))))
 
 (defn get-update-handle
@@ -302,9 +305,9 @@ Returns a map with:
   @(:result handle))
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} update-id]
+  [{:keys [^WorkflowStub stub] :as _workflow} update-id]
   (log/trace "get-update-handle:" update-id)
-  (let [handle (.getUpdateHandle stub update-id u/bytes-type)]
+  (let [handle (.getUpdateHandle stub update-id u/object-type)]
     (wrap-update-handle handle)))
 
 (defn update-with-start
@@ -333,7 +336,7 @@ Returns a map with:
 "
   ([workflow update-type update-args start-args]
    (update-with-start workflow update-type update-args start-args {}))
-  ([{:keys [^WorkflowStub stub] :as workflow} update-type update-args start-args options]
+  ([{:keys [^WorkflowStub stub] :as _workflow} update-type update-args start-args options]
    (log/trace "update-with-start:" update-type update-args start-args options)
    (let [update-options (build-update-options (merge {:update-name update-type
                                                       :wait-for-stage (or (:wait-for-stage options) :accepted)}
@@ -349,7 +352,7 @@ Gracefully cancels 'workflow'
 (cancel workflow)
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow}]
+  [{:keys [^WorkflowStub stub] :as _workflow}]
   (.cancel stub))
 
 (defn terminate
@@ -360,5 +363,5 @@ Forcefully terminates 'workflow'
 (terminate workflow \"unresponsive\", {})
 ```
 "
-  [{:keys [^WorkflowStub stub] :as workflow} reason params]
+  [{:keys [^WorkflowStub stub] :as _workflow} reason params]
   (.terminate stub reason (u/->objarray params)))

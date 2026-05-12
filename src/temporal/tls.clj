@@ -41,7 +41,7 @@ Arguments:
 - 'key-path':  The path to a PEM encoded private key representing this client's identity, used for mutual TLS authentication.
 
 "
-  ^SslContext [{:keys [ca-path cert-path key-path] :as args}]
+  ^SslContext [{:keys [ca-path cert-path key-path] :as _args}]
   (-> (GrpcSslContexts/forClient)
       (cond->
        (some? ca-path) (.trustManager (new-trustmanagerfactory ca-path))

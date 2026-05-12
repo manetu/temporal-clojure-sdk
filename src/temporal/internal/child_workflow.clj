@@ -2,8 +2,7 @@
   (:require [temporal.common :as common]
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
-  (:import [java.time Duration]
-           [io.temporal.api.enums.v1 ParentClosePolicy]
+  (:import [io.temporal.api.enums.v1 ParentClosePolicy]
            [io.temporal.workflow ChildWorkflowOptions ChildWorkflowOptions$Builder ChildWorkflowCancellationType]))
 
 (def cancellation-type->

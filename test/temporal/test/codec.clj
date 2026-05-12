@@ -3,8 +3,7 @@
 (ns temporal.test.codec
   (:require [clojure.test :refer :all]
             [taoensso.timbre :as log]
-            [temporal.codec :refer [Codec] :as codec]
-            [temporal.internal.utils :as utils]))
+            [temporal.codec :refer [Codec] :as codec]))
 
 (deftype NopCodec []
   Codec
@@ -17,11 +16,12 @@
 
 (deftest the-test
   (testing "verify that we can create a functional DataConverter"
-    (let [c (codec/create (NopCodec.))
+    (let [bytes-type (Class/forName "[B")
+          c (codec/create (NopCodec.))
           d (byte-array [1 2 3 4])
           r (as-> d $
               (.toPayload c $)
               (.get $)
-              (.fromPayload c $ utils/bytes-type utils/bytes-type))]
+              (.fromPayload c $ bytes-type bytes-type))]
 
       (is (= (into [] d) (into [] r))))))

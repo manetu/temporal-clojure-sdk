@@ -3,11 +3,11 @@
             [temporal.activity :as a :refer [defactivity]]
             [temporal.client.core :as c]
             [temporal.client.worker :as worker]
+            [temporal.converter.default :as default-data-converter]
+            [temporal.converter.json :as json]
             [temporal.workflow :as w :refer [defworkflow]])
-  (:import [java.time Duration]))
-
-(def client (atom nil))
-(def current-worker-thread (atom nil))
+  (:import [io.temporal.common.converter NullPayloadConverter]
+           [java.time Duration]))
 
 (def default-client-options {:target "localhost:7233"
                              :namespace "default"
@@ -37,34 +37,20 @@
   @(w/invoke user-child-workflow args (merge default-workflow-options {:workflow-id "child-workflow"})))
 
 (defn create-temporal-client
-  "Creates a new temporal client if the old one does not exist"
   ([] (create-temporal-client nil))
-  ([options]
-   (when-not @client
-     (let [options (merge default-client-options options)]
-       (log/info "creating temporal client" options)
-       (reset! client (c/create-client options))))))
 
-(defn worker-loop
-  ([client] (worker-loop client nil))
+  ([options]
+   (let [options (merge default-client-options options)]
+     (log/info "creating temporal client" options)
+     (c/create-client options))))
+
+(defn create-temporal-worker
+  ([client] (create-temporal-worker client nil))
+
   ([client options]
    (let [options (merge default-worker-options options)]
      (log/info "starting temporal worker" options)
      (worker/start client options))))
-
-(defn create-temporal-worker
-  "Starts a new instance running on another daemon thread,
-   stops the current temporal worker and thread if they exist"
-  ([client] (create-temporal-worker client nil))
-  ([client options]
-   (when (and @current-worker-thread (.isAlive @current-worker-thread))
-     (.interrupt @current-worker-thread)
-     (reset! current-worker-thread nil))
-   (let [thread (Thread. (partial worker-loop client options))]
-     (doto thread
-       (.setDaemon true)
-       (.start))
-     (reset! current-worker-thread thread))))
 
 (defn execute-workflow
   ([client workflow arguments] (execute-workflow client workflow arguments nil))
@@ -75,7 +61,15 @@
      (c/start workflow arguments)
      @(c/get-result workflow))))
 
+(def data-converter
+  (default-data-converter/create
+   [(NullPayloadConverter.)
+    (json/create)]))
+
 (comment
-  (do (create-temporal-client)
-      (create-temporal-worker @client)
-      (execute-workflow @client user-parent-workflow {:names ["Hanna" "Bob" "Tracy" "Felix"]})))
+  (let [client (create-temporal-client {:data-converter data-converter})
+        worker (create-temporal-worker client)]
+    (try
+      (execute-workflow client user-parent-workflow {:names ["Hanna" "Bob" "Tracy" "Felix"]})
+      (finally
+        (worker/stop worker)))))

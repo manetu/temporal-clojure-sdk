@@ -3,8 +3,7 @@
 (ns ^:no-doc temporal.internal.utils
   (:require [clojure.string :as string]
             [medley.core :as m]
-            [taoensso.timbre :as log]
-            [taoensso.nippy :as nippy])
+            [taoensso.timbre :as log])
   (:import [io.temporal.common.converter EncodedValues]
            [io.temporal.workflow Functions$Func
             Functions$Func1
@@ -14,9 +13,10 @@
             Functions$Func5
             Functions$Func6]))
 
-(def ^Class bytes-type (Class/forName "[B"))
+(def ^Class object-type Object)
 
 (defn build [builder spec params]
+  (log/trace "building" builder "with" params)
   (try
     (doseq [[key value] params]
       (if-let [f (get spec key)]
@@ -105,12 +105,13 @@
 (defn ->objarray
   "Serializes x to an array of Objects, suitable for many Temporal APIs"
   [x]
-  (into-array Object [(nippy/freeze x)]))
+  (into-array object-type [x]))
 
 (defn ->args
   "Decodes EncodedValues to native clojure data type.  Assumes all data is in the first element"
   [^EncodedValues args]
-  (nippy/thaw (.get args (int 0) bytes-type)))
+  (log/trace "args:" args)
+  (.get args (int 0) object-type))
 
 (def namify
   "Converts strings or keywords to strings, preserving fully qualified keywords when applicable"
@@ -120,10 +121,9 @@
 
 (defn complete-invoke
   [stub result]
-  (log/trace stub "completed with" (count result) "bytes")
-  (let [r (nippy/thaw result)]
-    (log/trace stub "results:" r)
-    r))
+  (log/trace stub "completed with" result)
+
+  result)
 
 (defn ->Func
   [f]

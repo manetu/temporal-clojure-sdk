@@ -5,7 +5,7 @@
             :url "https://www.apache.org/licenses/LICENSE-2.0"
             :year 2023
             :key "apache-2.0"}
-  :plugins [[lein-cljfmt "0.9.0"]
+  :plugins [[dev.weavejester/lein-cljfmt "0.15.6"]
             [lein-kibit "0.1.8"]
             [lein-bikeshed "0.5.2"]
             [lein-cloverage "1.2.4"]
@@ -18,6 +18,7 @@
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
                  [funcool/promesa "11.0.678"]
+                 [metosin/jsonista "0.3.13"]
                  [medley "1.4.0"]
                  [slingshot "0.12.2"]]
   :repl-options {:init-ns user}
