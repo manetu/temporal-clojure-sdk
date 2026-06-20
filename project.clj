@@ -14,6 +14,7 @@
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/core.async "1.7.701"]
                  [io.temporal/temporal-shaded "1.32.1"]
+                 [com.jayway.jsonpath/json-path "2.9.0"]
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
@@ -36,5 +37,5 @@
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false
                             :fail-fast? true}
-              :fail-threshold 89
+              :fail-threshold 90
               :ns-exclude-regex [#"temporal.client.worker"]})

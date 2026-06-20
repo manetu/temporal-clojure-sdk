@@ -1,0 +1,8 @@
+cache.db*
+issues/
+specs/
+worktrees/
+config.local.json
+merge-driver.log
+telemetry-buffer.jsonl
+telemetry-flush.json
