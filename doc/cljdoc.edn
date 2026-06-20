@@ -5,4 +5,5 @@
   ["Activities" {:file "doc/activities.md"}]
   ["Workers" {:file "doc/workers.md"}]
   ["Clients" {:file "doc/clients.md"}]
-  ["Testing" {:file "doc/testing.md"}]]}
+  ["Testing" {:file "doc/testing.md"}]
+  ["Replay Testing" {:file "doc/replay_testing.md"}]]}

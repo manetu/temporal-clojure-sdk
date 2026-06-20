@@ -22,6 +22,10 @@ temporal server start-dev
 
 - [**Updates**](./updates): Shows the new synchronous request-response pattern with updates, including validators, async updates, and update-with-start.
 
+### Testing
+
+- [**Replay Testing**](./replay-testing): Demonstrates workflow replay testing using `temporal.testing.history` and `temporal.testing.replayer`. Shows how to capture event histories, commit them as fixtures, and detect non-determinism in CI — **no running Temporal server required**.
+
 ### Advanced Patterns
 
 - [**Saga**](./saga): Implements the Saga pattern for distributed transactions with compensation. Demonstrates multi-step workflows with rollback on failure.
