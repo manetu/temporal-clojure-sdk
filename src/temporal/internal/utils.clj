@@ -105,11 +105,6 @@
         (assoc entry :fn f)))
     entry))
 
-(defn find-dispatch-fn
-  "Finds any functions named 't' that carry metadata 'marker'"
-  [dispatch-table t]
-  (resolve-dispatch-fn (find-dispatch dispatch-table t)))
-
 (defn- dispatch-entry
   [marker x hot-reload?]
   (let [f (if (var? x) @x x)
