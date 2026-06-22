@@ -28,14 +28,6 @@
     (format "%.3fx" (double x))
     x))
 
-(defn- report-criterium-comparison
-  [label benches]
-  (report-benchmark
-   label
-   (into {}
-         (map (fn [[k f]] [k (format-ms (criterium-ms f))]))
-         benches)))
-
 (defn- report-criterium-dispatch-loading-comparison
   [label {:keys [static-dispatch hot-reload-dispatch]}]
   (let [static-ms (criterium-ms static-dispatch)
