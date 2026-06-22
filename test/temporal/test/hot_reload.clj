@@ -107,6 +107,19 @@
       #(is (= :legacy (:type (u/resolve-dispatch ::iw/def entry)))))
     (is (nil? (:type (u/resolve-dispatch ::iw/def (assoc entry :type :legacy)))))))
 
+(deftest workflow-hot-reload-uses-one-var-snapshot-test
+  (let [dispatch (iw/import-dispatch [hot-reload-workflow] {:hot-reload? true})
+        entry (get dispatch "hot-reload-workflow")
+        first-fn (with-meta (fn [_] :first) (meta hot-reload-workflow))
+        second-fn (with-meta (fn [_] :second) (meta hot-reload-workflow))]
+    (with-var-root #'hot-reload-workflow
+      first-fn
+      #(let [resolved-entry (u/resolve-dispatch ::iw/def entry)]
+         (with-var-root #'hot-reload-workflow
+           second-fn
+           (fn []
+             (is (= :first ((u/resolve-dispatch-fn resolved-entry) nil)))))))))
+
 (defn- synthetic-activity-fns
   [n]
   (mapv (fn [i]
