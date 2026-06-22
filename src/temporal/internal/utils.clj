@@ -86,12 +86,13 @@
       (throw (ex-info "workflow/activity not found" {:function t}))))
 
 (defn resolve-dispatch-fn
-  "Resolves a dispatch entry to the current function value. If the entry stores a
-  Var, dereferences it at execution time so re-evaluated definitions are picked up."
+  "Resolves a dispatch entry to a function value. If resolve-dispatch already
+  cached a function in the entry, use that value; otherwise dereference the Var
+  at execution time so re-evaluated definitions are picked up."
   [entry]
-  (if-let [v (:var entry)]
-    @v
-    (:fn entry)))
+  (if (contains? entry :fn)
+    (:fn entry)
+    (some-> entry :var deref)))
 
 (defn resolve-dispatch
   "Resolves a dispatch entry, refreshing marker metadata from the current Var value
