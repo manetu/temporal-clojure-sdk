@@ -4,9 +4,10 @@
    [temporal.internal.utils :as u])
   (:import
    [io.temporal.authorization AuthorizationTokenSupplier]
-   [io.temporal.client WorkflowClientOptions WorkflowClientOptions$Builder WorkflowClientPlugin]
+   [io.temporal.client ActivityClientOptions ActivityClientOptions$Builder WorkflowClientOptions WorkflowClientOptions$Builder WorkflowClientPlugin]
    [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder ScheduleClientPlugin]
-   [io.temporal.common.interceptors WorkflowClientInterceptorBase]
+   [io.temporal.common.context ContextPropagator]
+   [io.temporal.common.interceptors ActivityClientInterceptor WorkflowClientInterceptorBase]
    [io.temporal.serviceclient GrpcCompression WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder WorkflowServiceStubsPlugin]))
 
 (defn assoc-default-data-converter [{:keys [data-converter] :as params}]
@@ -124,3 +125,28 @@
    (WorkflowServiceStubs/newServiceStubs (stub-options-> options)))
   ([options timeout]
    (WorkflowServiceStubs/newConnectedServiceStubs (stub-options-> options) timeout)))
+
+(def activity-client-options
+  "
+`ActivityClientOptions` configuration map (See [[temporal.client.activity/create-client]])
+
+| Value                     | Description                                                                 | Type         | Default |
+| ------------------------- | --------------------------------------------------------------------------- | ------------ | ------- |
+| :namespace                | Sets the Temporal namespace context for this client                         | String       | |
+| :identity                 | Overrides the client identity                                               | String       | |
+| :data-converter           | Overrides the data converter used to serialize arguments and results.       | [DataConverter](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/converter/DataConverter.html) | |
+| :interceptors             | Collection of interceptors used to intercept activity client calls.         | List of [ActivityClientInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/ActivityClientInterceptor.html) | |
+| :context-propagators      | Collection of context propagators.                                          | List of [ContextPropagator](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/context/ContextPropagator.html) | |
+"
+  {:namespace           #(.setNamespace ^ActivityClientOptions$Builder %1 %2)
+   :identity            #(.setIdentity ^ActivityClientOptions$Builder %1 %2)
+   :data-converter      #(.setDataConverter ^ActivityClientOptions$Builder %1 %2)
+   :interceptors        #(.setInterceptors ^ActivityClientOptions$Builder %1 ^java.util.List %2)
+   :context-propagators #(.setContextPropagators ^ActivityClientOptions$Builder %1 ^java.util.List %2)})
+
+(defn ^:no-doc activity-client-options->
+  ^ActivityClientOptions [params]
+  (->> params
+       (assoc-default-data-converter)
+       (u/build (ActivityClientOptions/newBuilder (ActivityClientOptions/getDefaultInstance))
+                activity-client-options)))
