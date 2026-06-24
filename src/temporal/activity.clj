@@ -3,10 +3,11 @@
 (ns temporal.activity
   "Methods for defining and invoking activity tasks"
   (:require [promesa.core :as p]
+            [promesa.protocols :as pt]
             [taoensso.timbre :as log]
             [temporal.internal.activity :as a]
             [temporal.internal.exceptions :as e]
-            [temporal.internal.promise] ;; needed for IPromise protocol extention
+            [temporal.internal.promise :as ip]
             [temporal.internal.utils :as u])
   (:import [io.temporal.workflow Workflow]
            [io.temporal.activity Activity]))
@@ -42,9 +43,93 @@ along with the Activity Task for the next retry attempt and can be extracted by 
     v))
 
 (defn get-info
-  "Returns information about the Activity execution"
+  "Returns information about the Activity execution as a map.
+
+Keys always present:
+
+| Key             | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| :task-token     | Opaque task token identifying this execution attempt    |
+| :activity-id    | Unique ID for this activity instance                    |
+| :activity-type  | The registered name of the activity type                |
+| :in-workflow?   | `true` when running inside a workflow, `false` for standalone activities (Temporal Java SDK 1.35+) |
+
+Keys present only when `:in-workflow?` is `true` (nil for Standalone Activities):
+
+| Key          | Description                               |
+| ------------ | ----------------------------------------- |
+| :workflow-id | ID of the parent workflow execution       |
+| :run-id      | Run ID of the parent workflow execution   |
+
+Use [[in-workflow?]] as a guard before relying on `:workflow-id` or `:run-id`."
   []
   (a/get-info))
+
+(defn in-workflow?
+  "Returns `true` when this activity is executing as part of a workflow.
+
+When `false` the activity is a Standalone Activity (introduced in Temporal Java SDK 1.35) and
+[[get-info]] will return `nil` for `:workflow-id`, `:run-id`, and related workflow fields."
+  []
+  (:in-workflow? (a/get-info)))
+
+(defn get-cancellation-token
+  "
+Returns an [ActivityCancellationToken](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityCancellationToken.html)
+that can be used to detect activity cancellation without requiring a heartbeat response. Unlike [[heartbeat]],
+this allows cancellation detection even in activities that do not heartbeat.
+
+**Requires a recent Temporal server version** to deliver cancellation via this path.
+Introduced in Temporal Java SDK 1.36.
+
+Use the native helper functions below to interact with the token without Java interop:
+- [[cancellation-requested?]] — non-blocking boolean check
+- [[throw-if-cancelled!]] — throw if cancelled (convenient for checkpointed loops)
+- [[cancellation-future]] — promesa-compatible promise that completes on cancellation
+
+```clojure
+(defactivity my-activity
+  [_ _]
+  (let [token (a/get-cancellation-token)]
+    (loop []
+      (Thread/sleep 100)
+      (if (a/cancellation-requested? token)
+        :cancelled
+        (recur)))))
+```
+"
+  []
+  (let [ctx (Activity/getExecutionContext)]
+    (.getCancellationToken ctx)))
+
+(defn cancellation-requested?
+  "Returns `true` if cancellation has been requested for this activity execution, `false` otherwise.
+
+Non-blocking. Use in polling loops together with [[get-cancellation-token]].
+
+See also [[throw-if-cancelled!]] for a throw-on-cancel variant."
+  [token]
+  (.isCancellationRequested token))
+
+(defn throw-if-cancelled!
+  "Throws `ActivityCanceledException` if cancellation has been requested for this activity execution.
+No-op otherwise. Useful as a lightweight cancellation checkpoint inside loops.
+
+See also [[cancellation-requested?]] for a non-throwing variant."
+  [token]
+  (.throwIfCancellationRequested token))
+
+(defn cancellation-future
+  "Returns a promesa-compatible promise that completes (with `nil`) when cancellation is requested.
+
+Useful for waiting on cancellation concurrently without polling. Deref (`@`) will block until
+the activity is cancelled. Compose with promesa combinators (e.g. `p/race`) as needed.
+
+See also [[cancellation-requested?]] for a non-blocking state check."
+  [token]
+  (->> (.getCancellationFuture token)
+       ip/->temporal
+       pt/-promise))
 
 (defn invoke
   "

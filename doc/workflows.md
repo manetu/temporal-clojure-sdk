@@ -534,6 +534,36 @@ Continue-as-new accepts an optional options map to override settings for the new
                            :workflow-run-timeout (Duration/ofHours 1)})
 ```
 
+### Search Attributes and Continue-As-New (Temporal Java SDK 1.33+)
+
+**Breaking change in Temporal Java SDK 1.33:** When `:search-attributes` is omitted from the continue-as-new options, the current run's search attributes are **carried over** to the new run. Prior to 1.33, omitting this option would result in the new run having no search attributes.
+
+If your workflow relies on search attributes being cleared on continue-as-new, you must now explicitly pass an empty map:
+
+```clojure
+;; Explicitly clear all search attributes on the new run
+(w/continue-as-new params {:search-attributes {}})
+```
+
+To carry over and update specific attributes, use [temporal.workflow/upsert-search-attributes](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#upsert-search-attributes) in the new run instead.
+
+### Versioning Options for Continue-As-New
+
+Two `:initial-versioning-behavior` options control how the new run is assigned to a deployment version:
+
+| Value                  | Java SDK | Description |
+| ---------------------- | -------- | ----------- |
+| `:auto-upgrade`        | 1.34+    | PINNED workflows upgrade to the latest deployment on continue-as-new |
+| `:use-ramping-version` | 1.36+    | Pins the new run to the task queue's Ramping Version at start |
+
+```clojure
+;; Allow a PINNED workflow to upgrade to latest deployment on CAN
+(w/continue-as-new params {:initial-versioning-behavior :auto-upgrade})
+
+;; Pin the new run to the task queue's Ramping Version
+(w/continue-as-new params {:initial-versioning-behavior :use-ramping-version})
+```
+
 ## Search Attributes
 
 Search attributes are indexed metadata that can be used to filter and search for Workflows in the Temporal UI and via the Visibility API.

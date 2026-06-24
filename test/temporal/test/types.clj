@@ -156,3 +156,19 @@
              (-> child-workflow-options .getParentClosePolicy)))
       (is (= io.temporal.workflow.ChildWorkflowCancellationType/ABANDON
              (-> child-workflow-options .getCancellationType))))))
+
+(deftest api-key-tls-options
+  (testing "API key alone auto-enables TLS (Temporal Java SDK 1.33+ behavior)"
+    (let [x (o/stub-options-> {:target "cloud.tmprl.cloud:7233"
+                               :api-key-fn (constantly "my-key")})]
+      (is (-> x .getEnableHttps))))
+  (testing "Explicit :enable-https false overrides API key auto-TLS"
+    (let [x (o/stub-options-> {:target "localhost:7233"
+                               :api-key-fn (constantly "dev-key")
+                               :enable-https false})]
+      (is (not (-> x .getEnableHttps)))))
+  (testing "API key + ssl-context does not auto-enable TLS via the flag"
+    (let [x (o/stub-options-> {:target "cloud.tmprl.cloud:7233"
+                               :api-key-fn (constantly "my-key")
+                               :ssl-context (-> (GrpcSslContexts/forClient) (.build))})]
+      (is (not (-> x .getEnableHttps))))))
