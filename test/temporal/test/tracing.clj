@@ -6,7 +6,8 @@
             [temporal.client.core :as c]
             [temporal.testing.env :as e]
             [temporal.workflow :refer [defworkflow]])
-  (:import [io.temporal.opentracing OpenTracingClientInterceptor OpenTracingWorkerInterceptor]))
+  (:import [io.opentracing.mock MockTracer]
+           [io.temporal.opentracing OpenTracingClientInterceptor OpenTracingOptions OpenTracingWorkerInterceptor]))
 
 ;; do not use the shared fixture, since we want to control the env creation
 
@@ -22,6 +23,9 @@
 ;;-----------------------------------------------------------------------------
 (defn get-client []
   (get @state :client))
+
+(defn get-tracer []
+  (get @state :tracer))
 
 (defn create-workflow [workflow]
   (c/create-workflow (get-client) workflow {:task-queue task-queue}))
@@ -44,19 +48,24 @@
 ;; Fixtures
 ;;-----------------------------------------------------------------------------
 (defn create-service []
-  (let [env    (e/create {:workflow-client-options {:interceptors [(OpenTracingClientInterceptor.)]}
-                          :worker-factory-options {:worker-interceptors [(OpenTracingWorkerInterceptor.)]}})
+  (let [tracer (MockTracer.)
+        opts   (-> (OpenTracingOptions/newBuilder)
+                   (.setTracer tracer)
+                   (.build))
+        env    (e/create {:workflow-client-options {:interceptors [(OpenTracingClientInterceptor. opts)]}
+                          :worker-factory-options {:worker-interceptors [(OpenTracingWorkerInterceptor. opts)]}})
         client (e/get-client env)]
     (e/start env {:task-queue task-queue})
     (swap! state assoc
            :env env
-           :client client)))
+           :client client
+           :tracer tracer)))
 
 (defn destroy-service []
   (swap! state
          (fn [{:keys [env] :as s}]
            (e/stop env)
-           (dissoc s :env :client))))
+           (dissoc s :env :client :tracer))))
 
 (defn wrap-service [test-fn]
   (create-service)
@@ -70,5 +79,10 @@
 ;;-----------------------------------------------------------------------------
 
 (deftest the-test
-  (testing "Verifies that we can invoke our traced workflow" ;; todo: verify that tracing is working
-    (is (-> (invoke traced-workflow) (= :ok)))))
+  (testing "Verifies that we can invoke our traced workflow"
+    (is (-> (invoke traced-workflow) (= :ok))))
+  (testing "Verifies that tracing spans are captured"
+    (let [spans    (.finishedSpans (get-tracer))
+          op-names (->> spans (map #(.operationName %)) set)]
+      (is (contains? op-names "StartWorkflow:traced-workflow"))
+      (is (contains? op-names "RunWorkflow:traced-workflow")))))

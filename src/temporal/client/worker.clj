@@ -7,7 +7,7 @@
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.common.interceptors WorkerInterceptor]
-           [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
+           [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder WorkerPlugin]
            [io.temporal.worker.tuning PollerBehavior PollerBehaviorAutoscaling]
            [io.temporal.workflow DynamicWorkflow]
            [temporal.internal.dispatcher DynamicWorkflowProxy]))
@@ -42,15 +42,19 @@ Options for configuring the worker-factory (See [[start]])
 | :enable-logging-in-replay                      |                                                                    | boolean | false       |
 | :max-workflow-thread-count                     | Maximum number of threads available for workflow execution across all workers created by the Factory. | int | 600 |
 | :worker-interceptors                           | Collection of WorkerInterceptors                                   | [WorkerInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/WorkerInterceptor.html) | |
+| :plugins                                       | Collection of plugins to customize worker behavior (since Temporal Java SDK 1.33).  | [WorkerPlugin](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerPlugin.html) | |
 | :workflow-cache-size                           | To avoid constant replay of code the workflow objects are cached on a worker. This cache is shared by all workers created by the Factory. | int | 600 |
 | :using-virtual-workflow-threads                | Use Virtual Threads for all workflow threads across all workers created by this factory. This option is only supported for JDK >= 21. If set then :max-workflow-thread-count is ignored. | boolean | false       |
+| :shutdown-check-interval                       | Polling interval used during graceful shutdown to check whether all tasks have drained. **Test-only** — Temporal discourages changing this in production; it is useful for speeding up worker shutdown in unit tests. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 50ms |
 "
 
   {:enable-logging-in-replay             #(.setEnableLoggingInReplay ^WorkerFactoryOptions$Builder %1 %2)
    :max-workflow-thread-count            #(.setMaxWorkflowThreadCount ^WorkerFactoryOptions$Builder %1 %2)
    :worker-interceptors                  #(.setWorkerInterceptors ^WorkerFactoryOptions$Builder %1 (into-array WorkerInterceptor %2))
+   :plugins                              #(.setPlugins ^WorkerFactoryOptions$Builder %1 (into-array WorkerPlugin %2))
    :workflow-cache-size                  #(.setWorkflowCacheSize ^WorkerFactoryOptions$Builder %1 %2)
-   :using-virtual-workflow-threads       #(.setUsingVirtualWorkflowThreads ^WorkerFactoryOptions$Builder %1 %2)})
+   :using-virtual-workflow-threads       #(.setUsingVirtualWorkflowThreads ^WorkerFactoryOptions$Builder %1 %2)
+   :shutdown-check-interval              #(.setShutdownCheckInterval ^WorkerFactoryOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-factory-options->
   ^WorkerFactoryOptions [params]
@@ -111,6 +115,7 @@ Options for configuring workers (See [[start]])
 | :workflow-task-pollers-behavior                 |           | Configures poller scaling behavior for workflow tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
 | :activity-task-pollers-behavior                 |           | Configures poller scaling behavior for activity tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
 | :nexus-task-pollers-behavior                    |           | Configures poller scaling behavior for nexus tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                    | keyword / map                                                                  |                                                             |
+| :allow-activity-heartbeat-during-shutdown       |           | When true, removes the restriction on activity heartbeats during graceful shutdown. **Trade-off:** enabling this makes `ActivityWorkerShutdownException` undetectable — activities can no longer distinguish normal heartbeat failure from worker shutdown. | boolean | false |
 
 #### dispatch-table
 
@@ -148,7 +153,8 @@ Options for configuring workers (See [[start]])
    :using-virtual-threads-on-workflow-worker         #(.setUsingVirtualThreadsOnWorkflowWorker ^WorkerOptions$Builder %1 %2)
    :workflow-task-pollers-behavior                   #(.setWorkflowTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
    :activity-task-pollers-behavior                   #(.setActivityTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
-   :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))})
+   :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
+   :allow-activity-heartbeat-during-shutdown         #(.setAllowActivityHeartbeatDuringShutdown ^WorkerOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-options->
   ^WorkerOptions [params]

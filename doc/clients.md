@@ -18,6 +18,52 @@ You can provide options to (create-client) to establish a connection to the spec
 (create-client {:target "temporal-frontend:7233" :namespace "my-namespace"})
 ```
 
+### Connecting to Temporal Cloud with an API Key
+
+Temporal Cloud uses API keys for authentication. Pass a 0-arity function that returns the key string via `:api-key-fn`:
+
+```clojure
+(create-client {:target "your-namespace.tmprl.cloud:7233"
+                :namespace "your-namespace"
+                :api-key-fn (constantly "your-api-key")})
+```
+
+**Since Temporal Java SDK 1.33, providing `:api-key-fn` automatically enables TLS** — you do not need to also set `:enable-https true`. This auto-enable only applies when neither `:ssl-context` nor `:channel` is also provided.
+
+If you need to explicitly control TLS behavior:
+
+```clojure
+;; Explicitly disable TLS even though an API key is set (unusual; e.g. local dev proxy)
+(create-client {:target "localhost:7233"
+                :namespace "default"
+                :api-key-fn (constantly "dev-key")
+                :enable-https false})
+
+;; mTLS + API key: ssl-context takes precedence; TLS is not auto-enabled
+(require '[temporal.tls :as tls])
+(create-client {:target "your-namespace.tmprl.cloud:7233"
+                :namespace "your-namespace"
+                :api-key-fn (constantly "your-api-key")
+                :ssl-context (tls/new-ssl-context {:cert-path "client.crt"
+                                                   :key-path  "client.key"})})
+```
+
+### gRPC Transport Compression
+
+Since Temporal Java SDK 1.36, **GZIP compression is enabled by default** on all gRPC calls. This is transparent to most users but may make traffic harder to inspect with tools like Wireshark or grpcurl.
+
+To disable compression (e.g. for debugging or environments where compression adds overhead):
+
+```clojure
+(import '[io.temporal.serviceclient GrpcCompression])
+
+(create-client {:target "temporal-frontend:7233"
+                :namespace "my-namespace"
+                :grpc-compression GrpcCompression/NONE})
+```
+
+The `:grpc-compression` option accepts any `GrpcCompression` enum value (`GrpcCompression/NONE` or `GrpcCompression/GZIP`).
+
 ### Workflow Executions
 
 After establishing a successful connection to the Temporal Frontend Service, you may perform Workflow Execution specific operations such as:
@@ -58,6 +104,52 @@ We can create a client to invoke our Workflow as follows:
 ```
 
 Evaluating this code should result in `Hi, Bob` appearing on the console.  Note that (get-result) returns a promise, thus requiring a dereference.
+
+### Plugins
+
+Since Temporal Java SDK 1.33, a stable Plugin API allows customizing SDK behavior at a coarser-grained level than interceptors.  Pass a collection of plugin instances via `:plugins` in the relevant options map.
+
+**WorkflowClient plugin** (`temporal.client.core/create-client` via `:workflow-client-options`):
+
+```clojure
+(import '[io.temporal.client WorkflowClientPlugin])
+
+(def my-client-plugin
+  (reify WorkflowClientPlugin
+    (getName [_] "my-client-plugin")
+    (configureWorkflowClient [_ builder]
+      ;; inspect or mutate the WorkflowClientOptions$Builder
+      )))
+
+(c/create-client {:plugins [my-client-plugin]})
+```
+
+**ScheduleClient plugin** (`temporal.client.schedule/create-client`):
+
+```clojure
+(import '[io.temporal.client.schedules ScheduleClientPlugin])
+
+(def my-schedule-plugin
+  (reify ScheduleClientPlugin
+    (getName [_] "my-schedule-plugin")
+    (configureScheduleClient [_ builder])))
+
+(s/create-client {:plugins [my-schedule-plugin]})
+```
+
+**gRPC stubs plugin** (`:stub-options` inside `create-client`):
+
+```clojure
+(import '[io.temporal.serviceclient WorkflowServiceStubsPlugin])
+
+(def my-stubs-plugin
+  (reify WorkflowServiceStubsPlugin
+    (getName [_] "my-stubs-plugin")
+    (configureServiceStubs [_ builder])
+    (connectServiceClient [_ opts supplier] (.get supplier))))
+
+(c/create-client {:stub-options {:plugins [my-stubs-plugin]}})
+```
 
 ### Scheduled Workflow Executions
 

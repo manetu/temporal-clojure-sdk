@@ -18,9 +18,12 @@
   @(a/invoke getinfo-activity args))
 
 (deftest the-test
-  (testing "Verifies that we can retrieve our activity-id"
+  (testing "within-workflow activity info"
     (let [workflow (t/create-workflow getinfo-workflow)]
       (c/start workflow {})
-      (let [{:keys [activity-id]} @(c/get-result workflow)]
-        (is (some? activity-id))))))
+      (let [{:keys [activity-id workflow-id run-id in-workflow?]} @(c/get-result workflow)]
+        (is (some? activity-id))
+        (is (true? in-workflow?))
+        (is (some? workflow-id))
+        (is (some? run-id))))))
 

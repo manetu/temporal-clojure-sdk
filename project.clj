@@ -1,4 +1,4 @@
-(defproject io.github.manetu/temporal-sdk "2.1.2-SNAPSHOT"
+(defproject io.github.manetu/temporal-sdk "2.2.0-SNAPSHOT"
   :description "A Temporal SDK for Clojure"
   :url "https://github.com/manetu/temporal-clojure-sdk"
   :license {:name "Apache License 2.0"
@@ -13,7 +13,7 @@
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/core.async "1.7.701"]
-                 [io.temporal/temporal-shaded "1.32.1"]
+                 [io.temporal/temporal-shaded "1.36.0"]
                  [com.jayway.jsonpath/json-path "2.9.0"]
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
@@ -33,7 +33,8 @@
                                     [criterium "0.4.6"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
-                                    [io.temporal/temporal-opentracing "1.32.1"]]
+                                    [io.temporal/temporal-opentracing "1.36.0"]
+                                    [io.opentracing/opentracing-mock "0.33.0"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false

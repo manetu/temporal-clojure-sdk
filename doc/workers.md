@@ -70,6 +70,54 @@ Activity hot reloading is usually the safest development option. Workflow hot re
 
 These options default to `false` and are intended for development / REPL use, not production deployments.
 
+## OpenTracing Integration
+
+Workers and clients support distributed tracing via the `temporal-opentracing` library.  Wire up the client and worker interceptors using `OpenTracingOptions` to inject a tracer:
+
+```clojure
+(require '[temporal.client.core :as c])
+(require '[temporal.client.worker :as worker])
+(:import [io.temporal.opentracing OpenTracingClientInterceptor OpenTracingOptions OpenTracingWorkerInterceptor])
+
+(def task-queue "MyTaskQueue")
+
+(let [opts   (-> (OpenTracingOptions/newBuilder)
+                 (.setTracer my-tracer)  ;; e.g. a Jaeger or Zipkin tracer
+                 (.build))
+      client (c/create-client {:interceptors [(OpenTracingClientInterceptor. opts)]})]
+  (worker/start client {:task-queue task-queue
+                        :worker-interceptors [(OpenTracingWorkerInterceptor. opts)]}))
+```
+
+When `OpenTracingOptions` is omitted, the interceptors fall back to `GlobalTracer.get()`.  Using the options builder is preferred for testability — pass a `MockTracer` in tests to verify that spans are captured.
+
+As of Temporal Java SDK 1.36, a new `OpenTracingActivityClientInterceptor` is available for tracing standalone activities executed via `ActivityClient`.  This will be wired in when `temporal.client.activity` (standalone activity support) is added to the SDK.
+
+## Plugins
+
+Since Temporal Java SDK 1.33, a stable Plugin API allows customizing worker behavior at a coarser-grained level than interceptors.  Pass a collection of plugin instances via `:plugins` in the `factory-options` argument to `worker/start`.
+
+```clojure
+(import '[io.temporal.worker WorkerPlugin])
+
+(def my-worker-plugin
+  (reify WorkerPlugin
+    (getName [_] "my-worker-plugin")
+    (configureWorkerFactory [_ builder])
+    (configureWorker [_ task-queue builder])
+    (initializeWorker [_ task-queue worker])
+    (startWorker [_ task-queue worker next] (.accept next task-queue worker))
+    (shutdownWorker [_ task-queue worker next] (.accept next task-queue worker))
+    (startWorkerFactory [_ factory next] (.accept next factory))
+    (shutdownWorkerFactory [_ factory next] (.accept next factory))
+    (replayWorkflowExecution [_ worker history cb] (.replay cb worker history))))
+
+(worker/start client {:task-queue task-queue}
+                     {:plugins [my-worker-plugin]})
+```
+
+Plugins and interceptors are complementary: interceptors hook into individual workflow/activity calls, while plugins hook into the lifecycle of the worker itself.
+
 ## Automatic Poller Scaling
 
 By default, Workers use a fixed number of pollers for each task type.  You can configure Workers to automatically scale the number of concurrent polls based on load using the poller behavior options:
@@ -92,4 +140,31 @@ You can also customize the min/max bounds:
                       :activity-task-pollers-behavior {:type :autoscaling
                                                        :min-pollers 2
                                                        :max-pollers 10}})
+```
+
+## Shutdown Options
+
+### Activity heartbeats during shutdown
+
+By default, Temporal blocks activity heartbeats once graceful shutdown begins.  Workers use this to detect shutdown and throw `ActivityWorkerShutdownException` from the heartbeat call so activities can react promptly.
+
+Setting `:allow-activity-heartbeat-during-shutdown true` removes that restriction — heartbeats continue to flow until the activity finishes.  The trade-off is that `ActivityWorkerShutdownException` becomes undetectable: activities that rely on it to exit early will not see the exception and must finish naturally.
+
+```clojure
+(worker/start client {:task-queue task-queue
+                      :allow-activity-heartbeat-during-shutdown true})
+```
+
+### Shutdown check interval (test-only)
+
+`:shutdown-check-interval` controls how often the worker factory polls to check whether all in-flight tasks have drained during graceful shutdown.  The default (50 ms) is appropriate for production.
+
+Temporal **discourages changing this value in production**.  It is exposed here specifically for unit tests that need worker shutdown to complete quickly:
+
+```clojure
+(require '[java.time Duration])
+
+;; In a test helper — not for production use
+(worker/start client {:task-queue task-queue}
+                     {:shutdown-check-interval (Duration/ofMillis 10)})
 ```

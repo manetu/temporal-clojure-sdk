@@ -62,7 +62,8 @@
      :workflow-id    (.getWorkflowId d)
      :run-id         (.getRunId d)
      :activity-id    (.getActivityId d)
-     :activity-type  (.getActivityType d)}))
+     :activity-type  (.getActivityType d)
+     :in-workflow?   (.isInWorkflow d)}))
 
 (defn get-info []
   (->> (Activity/getExecutionContext)
