@@ -67,7 +67,7 @@
    :workflow-execution-timeout  #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
    :workflow-run-timeout        #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
    :workflow-task-timeout       #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
-   :retry-options               #(.setRetryOptions %1 (common/retry-options-> %2))
+   :retry-options               #(.setRetryOptions ^WorkflowOptions$Builder %1 (common/retry-options-> %2))
    :cron-schedule               #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
    :memo                        #(.setMemo ^WorkflowOptions$Builder %1 %2)
    :search-attributes           #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
