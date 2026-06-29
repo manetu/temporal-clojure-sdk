@@ -34,7 +34,8 @@
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
                                     [io.temporal/temporal-opentracing "1.36.0"]
-                                    [io.opentracing/opentracing-mock "0.33.0"]]
+                                    [io.opentracing/opentracing-mock "0.33.0"]
+                                    [same/ish "0.1.7"]]
                    :resource-paths ["test/temporal/test/resources"]}}
   :cloverage {:runner :eftest
               :runner-opts {:multithread? false

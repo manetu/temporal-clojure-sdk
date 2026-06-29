@@ -27,7 +27,8 @@
    :start-to-close-timeout    #(.setStartToCloseTimeout ^ActivityOptions$Builder %1 %2)
    :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^ActivityOptions$Builder %1 %2)
    :schedule-to-start-timeout #(.setScheduleToStartTimeout ^ActivityOptions$Builder %1 %2)
-   :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)})
+   :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)
+   :priority                  #(.setPriority ^ActivityOptions$Builder %1 (common/priority-options-> %2))})
 
 (defn import-invoke-options
   [{:keys [start-to-close-timeout schedule-to-close-timeout] :as params}]

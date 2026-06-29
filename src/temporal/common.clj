@@ -2,7 +2,9 @@
 
 (ns temporal.common
   (:require [temporal.internal.utils :as u])
-  (:import [io.temporal.common RetryOptions RetryOptions$Builder]))
+  (:import [io.temporal.common
+            Priority Priority$Builder
+            RetryOptions RetryOptions$Builder]))
 
 (def retry-options
   "
@@ -23,3 +25,19 @@
 (defn ^:no-doc retry-options->
   ^RetryOptions [params]
   (u/build (RetryOptions/newBuilder (RetryOptions/getDefaultInstance)) retry-options params))
+
+(def priority-options
+  "
+  | Value                     | Description                                                                                             | Type              | Default |
+  | ------------------------- | ------------------------------------------------------------------------------------------------------- | ------------      | ------- |
+  | :priority-key             | An integer from 1 to the server-configured maximum (default 5). Smaller priority key values run sooner. | int               | 3       |
+  | :fairness-key             | An identifier for the fairness balancing mechanism.                                                     | String or keyword |         |
+  | :fairness-weight          | The proportion to use for the round robin fairness balancing mechanism.                                 | float             | 1       |
+"
+  {:priority-key    #(.setPriorityKey ^Priority$Builder %1 %2)
+   :fairness-key    #(.setFairnessKey ^Priority$Builder %1 (u/namify %2))
+   :fairness-weight #(.setFairnessWeight ^Priority$Builder %1 %2)})
+
+(defn ^:no-doc priority-options->
+  ^Priority [params]
+  (u/build (Priority/newBuilder) priority-options params))

@@ -2,6 +2,7 @@
 
 (ns temporal.test.types
   (:require [clojure.test :refer :all]
+            [same.core :refer [ish?]]
             [temporal.client.worker :as worker]
             [temporal.client.options :as o]
             [temporal.internal.workflow :as w]
@@ -21,9 +22,15 @@
                              :retry-options {:maximum-attempts 1}
                              :cron-schedule "* * * * *"
                              :memo {"foo" "bar"}
-                             :search-attributes {"foo" "bar"}})]
+                             :search-attributes {"foo" "bar"}
+                             :priority {:priority-key 5
+                                        :fairness-key :premium
+                                        :fairness-weight 3.14}})]
       (is (-> x (.getWorkflowId) (= "foo")))
-      (is (-> x (.getTaskQueue) (= "bar"))))))
+      (is (-> x (.getTaskQueue) (= "bar")))
+      (is (-> x (.getPriority) (.getPriorityKey) (= 5)))
+      (is (-> x (.getPriority) (.getFairnessKey) (= "premium")))
+      (is (ish? (-> x (.getPriority) (.getFairnessWeight)) 3.14)))))
 
 (deftest client-options
   (testing "Verify that our stub options work"
@@ -139,7 +146,10 @@
                    :memo {"foo" "bar"}
                    :workflow-id-reuse-policy :terminate-if-running
                    :parent-close-policy :terminate
-                   :cancellation-type :abandon}
+                   :cancellation-type :abandon
+                   :priority {:priority-key 5
+                              :fairness-key :premium
+                              :fairness-weight 3.14}}
           child-workflow-options (cw/child-workflow-options-> options)]
       (is (some? child-workflow-options))
       (is (= "foo" (-> child-workflow-options .getWorkflowId)))
@@ -155,7 +165,10 @@
       (is (= io.temporal.api.enums.v1.ParentClosePolicy/PARENT_CLOSE_POLICY_TERMINATE
              (-> child-workflow-options .getParentClosePolicy)))
       (is (= io.temporal.workflow.ChildWorkflowCancellationType/ABANDON
-             (-> child-workflow-options .getCancellationType))))))
+             (-> child-workflow-options .getCancellationType)))
+      (is (-> child-workflow-options (.getPriority) (.getPriorityKey) (= 5)))
+      (is (-> child-workflow-options (.getPriority) (.getFairnessKey) (= "premium")))
+      (is (ish? (-> child-workflow-options (.getPriority) (.getFairnessWeight)) 3.14)))))
 
 (deftest api-key-tls-options
   (testing "API key alone auto-enables TLS (Temporal Java SDK 1.33+ behavior)"
