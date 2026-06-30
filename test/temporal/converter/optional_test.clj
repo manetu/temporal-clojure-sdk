@@ -1,7 +1,7 @@
 (ns temporal.converter.optional-test
   (:require
    [clojure.template :refer [do-template]]
-   [clojure.test :refer [are deftest is testing]]
+   [clojure.test :refer [deftest is testing]]
    [temporal.converter.optional :as sut])
   (:import
    [java.util Optional]))
