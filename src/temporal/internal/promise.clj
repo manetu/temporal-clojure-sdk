@@ -5,14 +5,8 @@
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
-           [java.util.concurrent CompletableFuture]
+           [java.util.concurrent CompletableFuture CompletionStage]
            [java.util.function BiFunction]))
-
-(deftype PromiseAdapter [^Promise p]
-  IDeref
-  (deref [_] (.get p))
-  IBlockingDeref
-  (deref [_ ms val] (.get p ms val)))
 
 (deftype BiFunctionWrapper [f]
   BiFunction
@@ -23,6 +17,14 @@
 
 (defmethod ->temporal Promise
   [x] x)
+
+(deftype PromiseAdapter [^Promise p]
+  IDeref
+  (deref [_] (.get p))
+  IBlockingDeref
+  (deref [_ ms val] (.get p ms val))
+  CompletionStage
+  (thenCompose [this _f] this))
 
 (defmethod ->temporal PromiseAdapter
   [x] (.p x))
