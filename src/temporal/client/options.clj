@@ -8,7 +8,8 @@
    [io.temporal.client.schedules ScheduleClientOptions ScheduleClientOptions$Builder ScheduleClientPlugin]
    [io.temporal.common.context ContextPropagator]
    [io.temporal.common.interceptors ActivityClientInterceptor WorkflowClientInterceptorBase]
-   [io.temporal.serviceclient GrpcCompression WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder WorkflowServiceStubsPlugin]))
+   [io.temporal.serviceclient GrpcCompression WorkflowServiceStubs WorkflowServiceStubsOptions WorkflowServiceStubsOptions$Builder WorkflowServiceStubsPlugin]
+   [java.time Duration]))
 
 (defn assoc-default-data-converter [{:keys [data-converter] :as params}]
   (cond-> params
@@ -102,7 +103,7 @@
    :api-key-fn               #(.addApiKey ^WorkflowServiceStubsOptions$Builder %1 (apikey-auth-fn-> %2))
    :enable-https             #(.setEnableHttps ^WorkflowServiceStubsOptions$Builder %1 %2)
    :target                   #(.setTarget ^WorkflowServiceStubsOptions$Builder %1 %2)
-   :rpc-timeout              #(.setRpcTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
+   :rpc-timeout              #(.setRpcTimeout ^WorkflowServiceStubsOptions$Builder %1 ^Duration %2)
    :rpc-long-poll-timeout    #(.setRpcLongPollTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
    :rpc-query-timeout        #(.setRpcQueryTimeout ^WorkflowServiceStubsOptions$Builder %1 %2)
    :backoff-reset-freq       #(.setConnectionBackoffResetFrequency ^WorkflowServiceStubsOptions$Builder %1 %2)

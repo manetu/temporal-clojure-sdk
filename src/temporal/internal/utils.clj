@@ -15,6 +15,9 @@
 
 (def ^Class object-type Object)
 
+;; `builder` is polymorphic across many unrelated Temporal `Builder` classes (they share no
+;; common interface), so `.build` is unavoidably reflective here by design.
+(set! *warn-on-reflection* false)
 (defn build [builder spec params]
   (log/trace "building" builder "with" params)
   (try
@@ -27,6 +30,7 @@
     (.build builder)
     (catch Exception e
       (log/error e))))
+(set! *warn-on-reflection* true)
 
 (defn get-annotation
   "Retrieves metadata annotation 'a' from 'v'"
@@ -145,7 +149,7 @@
   (log/trace "args:" args)
   (.get args (int 0) object-type))
 
-(def namify
+(def ^String namify
   "Converts strings or keywords to strings, preserving fully qualified keywords when applicable"
   (memoize
    (fn [x]

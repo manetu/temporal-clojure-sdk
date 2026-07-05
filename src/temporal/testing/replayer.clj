@@ -7,7 +7,8 @@
             [temporal.client.worker :as worker]
             [temporal.testing.env :as env])
   (:import [io.temporal.testing WorkflowReplayer TestWorkflowEnvironment ReplayResults ReplayResults$ReplayError]
-           [io.temporal.common WorkflowExecutionHistory]))
+           [io.temporal.common WorkflowExecutionHistory]
+           [io.temporal.worker Worker]))
 
 (extend-protocol p/Datafiable
   ReplayResults
@@ -51,17 +52,17 @@ Arguments:
 
 See also [[replay]], [[replay-all]], [[replay-history]]
 "
-  ([]
+  (^Replayer []
    (create {}))
 
-  ([{:keys [data-converter dispatch]}]
+  (^Replayer [{:keys [data-converter dispatch]}]
    (let [task-queue  (str "replay-" (java.util.UUID/randomUUID))
          env-options (cond-> {}
                        data-converter (assoc :workflow-client-options {:data-converter data-converter}))
          env         (env/create env-options)
-         worker-obj  (.newWorker ^TestWorkflowEnvironment env task-queue (worker/worker-options-> {}))
+         worker-obj  (.newWorker env task-queue (worker/worker-options-> {}))
          _           (worker/init worker-obj {:dispatch dispatch})
-         _           (.start ^TestWorkflowEnvironment env)]
+         _           (.start env)]
      (->Replayer env worker-obj))))
 
 (defn replay
@@ -121,9 +122,10 @@ See also [[replay]], [[replay-history]]
    (replay-all replayer histories {}))
 
   ([replayer histories {:keys [fail-fast?] :or {fail-fast? false}}]
-   (let [hs (vec histories)]
+   (let [^Iterable hs (vec histories)
+         ^Worker worker (:worker replayer)]
      (try
-       (let [results (WorkflowReplayer/replayWorkflowExecutions hs (boolean fail-fast?) (:worker replayer))]
+       (let [results (WorkflowReplayer/replayWorkflowExecutions hs (boolean fail-fast?) worker)]
          (assoc (d/datafy results) :total (count hs)))
        (catch Exception e
          (throw (ex-info "Workflow replay failed: non-determinism detected"

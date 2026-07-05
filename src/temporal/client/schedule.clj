@@ -6,8 +6,6 @@
   (:import [java.time Duration]
            [io.temporal.client.schedules ScheduleClient ScheduleUpdate ScheduleUpdateInput]))
 
-(set! *warn-on-reflection* true)
-
 (defn create-client
   "Creates a `ScheduleClient` instance suitable for interacting with Temporal's Schedules.
 

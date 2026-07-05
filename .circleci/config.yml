@@ -16,6 +16,13 @@ jobs:
 
           ./lein version
           ./lein cljfmt check
+
+          ./lein check 2>&1 | tee reflection.out
+          if grep -q "Reflection warning" reflection.out; then
+            echo "Reflection warnings detected - add type hints to eliminate them"
+            exit 1
+          fi
+
           ./lein cloverage
           ./lein jar
 

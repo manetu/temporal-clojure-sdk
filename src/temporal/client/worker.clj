@@ -73,10 +73,11 @@ Options for configuring the worker-factory (See [[start]])
     (map? behavior)
     (let [{:keys [type min-pollers max-pollers]} behavior]
       (case type
+        ;; PollerBehaviorAutoscaling is immutable (no setters) - min/max/initial pollers are only
+        ;; configurable via its 3-arg constructor. A `nil` component defaults to the SDK's own
+        ;; built-in default (1/100/5 respectively; see PollerBehaviorAutoscaling's no-arg ctor).
         :autoscaling
-        (cond-> (PollerBehaviorAutoscaling.)
-          min-pollers (.setMinPollers min-pollers)
-          max-pollers (.setMaxPollers max-pollers))
+        (PollerBehaviorAutoscaling. (some-> min-pollers int) (some-> max-pollers int) nil)
         (throw (IllegalArgumentException. (str "Unknown poller behavior type: " type)))))
 
     :else

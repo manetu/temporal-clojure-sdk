@@ -36,14 +36,15 @@
   [x] x)
 
 (defmethod ->temporal PromiseAdapter
-  [x] (.p x))
+  [^PromiseAdapter x] (.p x))
 
 (defmethod ->temporal CompletableFuture
   [^CompletableFuture x]
   (reify Promise
     (get [_] (.get x))
     (handle [_ f]
-      (.handle x (->BiFunctionWrapper (fn [v e] (.apply f v e)))))
+      (let [^BiFunction bf (->BiFunctionWrapper (fn [v e] (.apply f v e)))]
+        (.handle x bf)))
     (isCompleted [_] (.isDone x))))
 
 (defmethod ->temporal :default
@@ -89,7 +90,7 @@
      (letfn [(handler [_v e]
                (if e
                  (let [cause (if (instance? Promise e)
-                               (.getFailure e)
+                               (let [^Promise p e] (.getFailure p))
                                e)]
                    (->temporal (f cause)))
                  (.p it)))]

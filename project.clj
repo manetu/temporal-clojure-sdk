@@ -13,6 +13,7 @@
             [lein-codox "0.10.8"]]
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/core.async "1.7.701"]
+                 [org.clojure/tools.analyzer.jvm "1.3.3"]
                  [io.temporal/temporal-shaded "1.36.0"]
                  [com.jayway.jsonpath/json-path "2.9.0"]
                  [com.taoensso/encore "3.139.0"]
@@ -25,6 +26,7 @@
   :repl-options {:init-ns user}
   :java-source-paths ["src" "resources"]
   :javac-options ["-target" "11" "-source" "11"]
+  :global-vars {*warn-on-reflection* true}
 
   :eastwood {:add-linters [:unused-namespaces]}
   :codox {:metadata {:doc/format :markdown}}

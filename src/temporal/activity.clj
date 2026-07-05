@@ -10,7 +10,7 @@
             [temporal.internal.promise :as ip]
             [temporal.internal.utils :as u])
   (:import [io.temporal.workflow Workflow]
-           [io.temporal.activity Activity]))
+           [io.temporal.activity Activity ActivityCancellationToken]))
 
 (defn heartbeat
   "
@@ -98,7 +98,7 @@ Use the native helper functions below to interact with the token without Java in
         (recur)))))
 ```
 "
-  []
+  ^ActivityCancellationToken []
   (let [ctx (Activity/getExecutionContext)]
     (.getCancellationToken ctx)))
 
@@ -108,7 +108,7 @@ Use the native helper functions below to interact with the token without Java in
 Non-blocking. Use in polling loops together with [[get-cancellation-token]].
 
 See also [[throw-if-cancelled!]] for a throw-on-cancel variant."
-  [token]
+  [^ActivityCancellationToken token]
   (.isCancellationRequested token))
 
 (defn throw-if-cancelled!
@@ -116,7 +116,7 @@ See also [[throw-if-cancelled!]] for a throw-on-cancel variant."
 No-op otherwise. Useful as a lightweight cancellation checkpoint inside loops.
 
 See also [[cancellation-requested?]] for a non-throwing variant."
-  [token]
+  [^ActivityCancellationToken token]
   (.throwIfCancellationRequested token))
 
 (defn cancellation-future
@@ -126,7 +126,7 @@ Useful for waiting on cancellation concurrently without polling. Deref (`@`) wil
 the activity is cancelled. Compose with promesa combinators (e.g. `p/race`) as needed.
 
 See also [[cancellation-requested?]] for a non-blocking state check."
-  [token]
+  [^ActivityCancellationToken token]
   (->> (.getCancellationFuture token)
        ip/->temporal
        pt/-promise))

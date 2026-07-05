@@ -9,8 +9,11 @@
 (extend-protocol ToByteString
   ;; byte/1 - FIXME: this is not supported by lein-cloverage
   (Class/forName "[B")
+  ;; ^bytes on the param (binding site) does not resolve the overload here - extend-protocol's
+  ;; method-table expansion loses the array hint, and copyFrom stays reflective. Hint at the
+  ;; call instead; see CLAUDE.md's extend-protocol exception.
   (->byte-string [value]
-    (ByteString/copyFrom value))
+    (ByteString/copyFrom ^bytes value))
 
   nil
   (->byte-string [_]

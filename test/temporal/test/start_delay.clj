@@ -9,8 +9,6 @@
    [java.time Duration Instant]
    [java.time.temporal ChronoUnit TemporalAmount]))
 
-(set! *warn-on-reflection* true)
-
 (use-fixtures :once t/wrap-service)
 
 (defworkflow delay-workflow
