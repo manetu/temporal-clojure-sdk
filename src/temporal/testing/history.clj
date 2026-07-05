@@ -32,9 +32,9 @@ Arguments:
 
 See also [[from-file]], [[from-resource]], [[fetch]], [[->json]]
 "
-  ([json]
+  ([^String json]
    (WorkflowExecutionHistory/fromJson json))
-  ([json workflow-id]
+  ([^String json ^String workflow-id]
    (WorkflowExecutionHistory/fromJson json workflow-id)))
 
 (defn- ->file
