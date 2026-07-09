@@ -1,7 +1,7 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.test.uuid-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [taoensso.timbre :as log]
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]

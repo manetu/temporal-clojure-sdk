@@ -2,15 +2,13 @@
 
 (ns temporal.test.utils
   "Utilities common to all tests"
-  (:require
-   [taoensso.timbre :as log]
-   [temporal.client.core :as c]
-   [temporal.converter.default :as default-data-converter]
-   [temporal.converter.json :as json]
-   [temporal.testing.env :as e])
-  (:import
-   [io.temporal.common.converter NullPayloadConverter]
-   [java.time Duration]))
+  (:require [taoensso.timbre :as log]
+            [temporal.client.core :as c]
+            [temporal.converter.default :as default-data-converter]
+            [temporal.converter.json :as json]
+            [temporal.testing.env :as e])
+  (:import [io.temporal.common.converter NullPayloadConverter]
+           [java.time Duration]))
 
 (log/set-min-level! :trace)
 
