@@ -1,7 +1,7 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.test.replay-history-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest testing is]]
             [clojure.datafy :as d]
             [clojure.java.io :as io]
             [temporal.testing.history :as history])
