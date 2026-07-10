@@ -47,10 +47,10 @@ Arguments:
 | :search-attributes              | Add a map of search attributes to be registered on the Temporal Server | map | |
 
 "
-  ([]
+  (^TestWorkflowEnvironment []
    (create {}))
 
-  ([options]
+  (^TestWorkflowEnvironment [options]
    (TestWorkflowEnvironment/newInstance (test-env-options-> options))))
 
 (defn start
@@ -68,7 +68,7 @@ Arguments:
   (stop env))
 ```
 "
-  [env {:keys [task-queue] :as options}]
+  [^TestWorkflowEnvironment env {:keys [task-queue] :as options}]
   (let [options (dissoc options :task-queue)
         worker (.newWorker env (u/namify task-queue) (worker/worker-options-> options))]
     (worker/init worker options)
@@ -101,5 +101,5 @@ see [[stop]]
 
 (defn get-client
   "Returns a client instance associated with the mock environment created by [[create]]"
-  [env]
+  [^TestWorkflowEnvironment env]
   (.getWorkflowClient env))

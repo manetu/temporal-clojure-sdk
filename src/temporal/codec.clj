@@ -26,7 +26,7 @@
   (datafy [d]
     {:metadata (->> (.getMetadataMap d)
                     (into {})
-                    (m/map-vals #(.toByteArray %)))
+                    (m/map-vals (fn [^ByteString bs] (.toByteArray bs))))
      :data     (-> (.getData d)
                    (.toByteArray))}))
 

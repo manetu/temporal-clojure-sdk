@@ -67,11 +67,12 @@
    :workflow-execution-timeout  #(.setWorkflowExecutionTimeout ^WorkflowOptions$Builder %1 %2)
    :workflow-run-timeout        #(.setWorkflowRunTimeout ^WorkflowOptions$Builder %1 %2)
    :workflow-task-timeout       #(.setWorkflowTaskTimeout ^WorkflowOptions$Builder %1 %2)
-   :retry-options               #(.setRetryOptions %1 (common/retry-options-> %2))
+   :retry-options               #(.setRetryOptions ^WorkflowOptions$Builder %1 (common/retry-options-> %2))
    :cron-schedule               #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
    :memo                        #(.setMemo ^WorkflowOptions$Builder %1 %2)
    :search-attributes           #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
-   :start-delay                 #(.setStartDelay ^WorkflowOptions$Builder %1 %2)})
+   :start-delay                 #(.setStartDelay ^WorkflowOptions$Builder %1 %2)
+   :priority                    #(.setPriority ^WorkflowOptions$Builder %1 (common/priority-options-> %2))})
 
 (defn ^:no-doc wf-options->
   ^WorkflowOptions [params]
@@ -85,19 +86,23 @@
   (u/get-annotated-name x ::def))
 
 (defn auto-dispatch
-  []
-  (u/get-annotated-fns ::def))
+  ([]
+   (auto-dispatch {}))
+  ([opts]
+   (u/get-annotated-fns ::def opts)))
 
 (defn import-dispatch
-  [syms]
-  (u/import-dispatch ::def syms))
+  ([syms]
+   (import-dispatch syms {}))
+  ([syms opts]
+   (u/import-dispatch ::def syms opts)))
 
 (defn execute
   [ctx dispatch args]
   (let [{:keys [workflow-type workflow-id]} (get-info)]
     (try+
-     (let [d (u/find-dispatch dispatch workflow-type)
-           f (:fn d)
+     (let [d (u/resolve-dispatch ::def (u/find-dispatch dispatch workflow-type))
+           f (u/resolve-dispatch-fn d)
            a (u/->args args)
            _ (log/trace workflow-id "calling" f "with args:" a)
            r (if (-> d :type (= :legacy))

@@ -16,8 +16,6 @@
             ScheduleState
             ScheduleState$Builder]))
 
-(set! *warn-on-reflection* true)
-
 (defn overlap-policy->
   [overlap-policy]
   (case overlap-policy

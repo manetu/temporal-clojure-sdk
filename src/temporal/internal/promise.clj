@@ -5,14 +5,25 @@
             [temporal.internal.utils :refer [->Func] :as u])
   (:import [clojure.lang IDeref IBlockingDeref]
            [io.temporal.workflow Promise]
-           [java.util.concurrent CompletableFuture]
-           [java.util.function BiFunction]))
+           [java.time Duration]
+           [java.util.concurrent CompletableFuture CompletionStage TimeUnit]
+           [java.util.function BiFunction Function]))
+
+(declare ->temporal)
 
 (deftype PromiseAdapter [^Promise p]
   IDeref
   (deref [_] (.get p))
   IBlockingDeref
-  (deref [_ ms val] (.get p ms val)))
+  (deref [_ ms val] (.get p ms val))
+  CompletionStage
+  (thenCompose [_ f]
+    (pt/-promise
+     (.thenCompose p (->Func (fn [v] (->temporal (.apply ^Function f v))))))))
+
+(defmethod print-method PromiseAdapter
+  [^PromiseAdapter x ^java.io.Writer w]
+  (.write w (str "#<temporal/PromiseAdapter " (.p x) ">")))
 
 (deftype BiFunctionWrapper [f]
   BiFunction
@@ -25,14 +36,15 @@
   [x] x)
 
 (defmethod ->temporal PromiseAdapter
-  [x] (.p x))
+  [^PromiseAdapter x] (.p x))
 
 (defmethod ->temporal CompletableFuture
   [^CompletableFuture x]
   (reify Promise
     (get [_] (.get x))
     (handle [_ f]
-      (.handle x (->BiFunctionWrapper (fn [v e] (.apply f v e)))))
+      (let [^BiFunction bf (->BiFunctionWrapper (fn [v e] (.apply f v e)))]
+        (.handle x bf)))
     (isCompleted [_] (.isDone x))))
 
 (defmethod ->temporal :default
@@ -78,7 +90,7 @@
      (letfn [(handler [_v e]
                (if e
                  (let [cause (if (instance? Promise e)
-                               (.getFailure e)
+                               (let [^Promise p e] (.getFailure p))
                                e)]
                    (->temporal (f cause)))
                  (.p it)))]
@@ -117,3 +129,29 @@
 
   PromiseAdapter
   (-promise [p] p))
+
+;; IState/IAwaitable: introspection and blocking-await support, so promesa's
+;; p/pending?, p/resolved?, p/rejected?, p/extract, and p/await!/p/await work
+;; against Temporal-backed promises. NOTE: Promise.getFailure() blocks until
+;; the promise completes, so it is only called after an isCompleted guard
+;; (where it returns immediately). ICancellable is deliberately not
+;; implemented: io.temporal.workflow.Promise has no external-cancel API
+;; (cancellation happens via CancellationScope).
+(extend-protocol pt/IState
+  PromiseAdapter
+  (-extract
+    ([it] (pt/-extract it nil))
+    ([it default]
+     (let [^Promise p (.p it)]
+       (if (.isCompleted p) (or (.getFailure p) (.get p)) default))))
+  (-resolved? [it] (let [^Promise p (.p it)] (and (.isCompleted p) (nil? (.getFailure p)))))
+  (-rejected? [it] (let [^Promise p (.p it)] (and (.isCompleted p) (some? (.getFailure p)))))
+  (-pending? [it] (not (.isCompleted ^Promise (.p it)))))
+
+(extend-protocol pt/IAwaitable
+  PromiseAdapter
+  (-await!
+    ([it] (.get ^Promise (.p it)))
+    ([it duration]
+     (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
+       (.get ^Promise (.p it) (long ms) TimeUnit/MILLISECONDS)))))

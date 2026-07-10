@@ -7,6 +7,8 @@
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow] :as w]
             [temporal.activity :refer [defactivity] :as a]
+            [temporal.testing.history :as history]
+            [temporal.testing.replayer :as replayer]
             [temporal.test.utils :as t]))
 
 (use-fixtures :once t/wrap-service)
@@ -40,7 +42,6 @@
 
 (deftest the-test
   (let [client (t/get-client)
-        worker (t/get-worker)
         wf (c/create-workflow client versioned-workflow {:task-queue t/task-queue :workflow-id "test-1"})]
     (testing "Invoke our v1 workflow"
       (c/start wf {})
@@ -51,8 +52,8 @@
        :return workflow-v2}                               ;; emulates a code update by dynamically substituting v2 for v1
       (testing "Replay the workflow after upgrading the code"
         (reset! mailbox :slug)
-        (let [history (.fetchHistory client "test-1")]
-          (.replayWorkflowExecution worker history))
+        (let [h (history/fetch client "test-1")]
+          (replayer/replay-history h))
         (is (= :slug @mailbox)))                            ;; activity is not re-executed in replay, so the :slug should remain
       (testing "Invoke our workflow fresh and verify that it takes the v2 path"
         (reset! mailbox nil)

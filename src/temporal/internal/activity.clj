@@ -27,7 +27,8 @@
    :start-to-close-timeout    #(.setStartToCloseTimeout ^ActivityOptions$Builder %1 %2)
    :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^ActivityOptions$Builder %1 %2)
    :schedule-to-start-timeout #(.setScheduleToStartTimeout ^ActivityOptions$Builder %1 %2)
-   :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)})
+   :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)
+   :priority                  #(.setPriority ^ActivityOptions$Builder %1 (common/priority-options-> %2))})
 
 (defn import-invoke-options
   [{:keys [start-to-close-timeout schedule-to-close-timeout] :as params}]
@@ -62,7 +63,8 @@
      :workflow-id    (.getWorkflowId d)
      :run-id         (.getRunId d)
      :activity-id    (.getActivityId d)
-     :activity-type  (.getActivityType d)}))
+     :activity-type  (.getActivityType d)
+     :in-workflow?   (.isInWorkflow d)}))
 
 (defn get-info []
   (->> (Activity/getExecutionContext)
@@ -75,12 +77,16 @@
   (u/get-annotated-name x ::def))
 
 (defn auto-dispatch
-  []
-  (u/get-annotated-fns ::def))
+  ([]
+   (auto-dispatch {}))
+  ([opts]
+   (u/get-annotated-fns ::def opts)))
 
 (defn import-dispatch
-  [syms]
-  (u/import-dispatch ::def syms))
+  ([syms]
+   (import-dispatch syms {}))
+  ([syms opts]
+   (u/import-dispatch ::def syms opts)))
 
 (defn- export-result [activity-id x]
   (log/trace activity-id "result:" x)
@@ -107,7 +113,7 @@
 (defn- -execute
   [ctx dispatch args]
   (let [{:keys [activity-type activity-id] :as _info} (get-info)
-        f (u/find-dispatch-fn dispatch activity-type)
+        f (u/resolve-dispatch-fn (u/find-dispatch dispatch activity-type))
         a (u/->args args)]
     (log/trace activity-id "calling" f "with args:" a)
     (try+

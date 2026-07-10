@@ -24,10 +24,11 @@
    :workflow-execution-timeout #(.setWorkflowExecutionTimeout ^ChildWorkflowOptions$Builder %1 %2)
    :workflow-run-timeout       #(.setWorkflowRunTimeout ^ChildWorkflowOptions$Builder %1 %2)
    :workflow-task-timeout      #(.setWorkflowTaskTimeout ^ChildWorkflowOptions$Builder %1 %2)
-   :retry-options              #(.setRetryOptions %1 (common/retry-options-> %2))
-   :cron-schedule              #(.setCronSchedule ^ChildWorkflowOptions$Builder %1 %2)
+   :retry-options              #(.setRetryOptions ^ChildWorkflowOptions$Builder %1 (common/retry-options-> %2))
+   :cron-schedule              #(.setCronSchedule ^ChildWorkflowOptions$Builder %1 ^String %2)
    :cancellation-type          #(.setCancellationType ^ChildWorkflowOptions$Builder %1 (cancellation-type-> %2))
-   :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)})
+   :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)
+   :priority                   #(.setPriority ^ChildWorkflowOptions$Builder %1 (common/priority-options-> %2))})
 
 (defn child-workflow-options->
   ^ChildWorkflowOptions [options]

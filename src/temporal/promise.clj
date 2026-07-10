@@ -10,7 +10,7 @@
 (defn- ->array
   ^"[Lio.temporal.workflow.Promise;" [coll]
   {:pre [(every? (partial instance? PromiseAdapter) coll)]}
-  (into-array Promise (map #(.p %) coll)))
+  (into-array Promise (map (fn [^PromiseAdapter p] (.p p)) coll)))
 
 (defn all
   "Returns Promise that becomes completed when all arguments are completed.

@@ -12,9 +12,11 @@
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w])
   (:import [io.temporal.api.common.v1 WorkflowExecution]
+           [io.temporal.common InitialVersioningBehavior]
            [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
            [java.util.function Supplier]
-           [java.time Duration]))
+           [java.time Duration])
+  (:refer-clojure :exclude [await]))
 
 (defn get-info
   "Return info about the current workflow"
@@ -168,17 +170,23 @@ Arguments:
     (if (= (count params*) 2)                               ;; legacy
       (do
         (println (str *file* ":" (:line (meta &form)) " WARN: (defworkflow " name ") with [ctx {:keys [signals args]}] is deprecated.  Use [args] form."))
-        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn :type :legacy}}
-           (fn [ctx# args#]
-             (log/trace (str ~fqn ": ") args#)
-             (let [f# (fn ~params* (do ~@body))]
-               (f# ctx# args#)))))
+        `(def ~name
+           (with-meta
+             (fn [ctx# args#]
+               (log/trace (str ~fqn ": ") args#)
+               (let [f# (fn ~params* (do ~@body))]
+                 (f# ctx# args#)))
+             {::w/def {:name ~sname :fqn ~fqn :type :legacy}
+              ::u/var (var ~name)})))
       (do
-        `(def ~name ^{::w/def {:name ~sname :fqn ~fqn}}
-           (fn [args#]
-             (log/trace (str ~fqn ": ") args#)
-             (let [f# (fn ~params* (do ~@body))]
-               (f# args#))))))))
+        `(def ~name
+           (with-meta
+             (fn [args#]
+               (log/trace (str ~fqn ": ") args#)
+               (let [f# (fn ~params* (do ~@body))]
+                 (f# args#)))
+             {::w/def {:name ~sname :fqn ~fqn}
+              ::u/var (var ~name)}))))))
 
 (defn invoke
   "
@@ -253,13 +261,20 @@ Arguments:
                     (log/error e)
                     (throw e)))))))
 
+(def ^:no-doc initial-versioning-behavior->
+  {:auto-upgrade        InitialVersioningBehavior/AUTO_UPGRADE
+   :use-ramping-version InitialVersioningBehavior/USE_RAMPING_VERSION})
+
 (def ^:no-doc continue-as-new-option-spec
-  {:task-queue            #(.setTaskQueue ^ContinueAsNewOptions$Builder %1 (u/namify %2))
-   :workflow-run-timeout  #(.setWorkflowRunTimeout ^ContinueAsNewOptions$Builder %1 %2)
-   :workflow-task-timeout #(.setWorkflowTaskTimeout ^ContinueAsNewOptions$Builder %1 %2)
-   :retry-options         #(.setRetryOptions ^ContinueAsNewOptions$Builder %1 (common/retry-options-> %2))
-   :memo                  #(.setMemo ^ContinueAsNewOptions$Builder %1 %2)
-   :search-attributes     #(.setSearchAttributes ^ContinueAsNewOptions$Builder %1 %2)})
+  {:task-queue                    #(.setTaskQueue ^ContinueAsNewOptions$Builder %1 (u/namify %2))
+   :workflow-run-timeout          #(.setWorkflowRunTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :workflow-task-timeout         #(.setWorkflowTaskTimeout ^ContinueAsNewOptions$Builder %1 %2)
+   :retry-options                 #(.setRetryOptions ^ContinueAsNewOptions$Builder %1 (common/retry-options-> %2))
+   :memo                          #(.setMemo ^ContinueAsNewOptions$Builder %1 %2)
+   :search-attributes             #(.setSearchAttributes ^ContinueAsNewOptions$Builder %1 %2)
+   :initial-versioning-behavior   #(.setInitialVersioningBehavior ^ContinueAsNewOptions$Builder %1
+                                                                  (or (get initial-versioning-behavior-> %2)
+                                                                      (throw (IllegalArgumentException. (str "Unknown :initial-versioning-behavior " %2 ". Must be one of " (keys initial-versioning-behavior->))))))})
 
 (defn ^:no-doc continue-as-new-options->
   ^ContinueAsNewOptions [options]
@@ -282,14 +297,15 @@ Arguments:
 
 #### options map
 
-| Value                   | Description                                                          | Type         | Default |
-| ----------------------- | -------------------------------------------------------------------- | ------------ | ------- |
-| :task-queue             | Task queue for the new run                                           | String       | same as current |
-| :workflow-run-timeout   | Timeout for the new workflow run                                     | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :workflow-task-timeout  | Timeout for individual workflow tasks                                | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-| :retry-options          | Retry options for the new run                                        | [[temporal.common/retry-options]] | |
-| :memo                   | Memo fields for the new run                                          | Map          | |
-| :search-attributes      | Search attributes for the new run                                    | Map          | |
+| Value                          | Description                                                                                              | Type         | Default |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------ | ------- |
+| :task-queue                    | Task queue for the new run                                                                               | String       | same as current |
+| :workflow-run-timeout          | Timeout for the new workflow run                                                                         | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :workflow-task-timeout         | Timeout for individual workflow tasks                                                                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :retry-options                 | Retry options for the new run                                                                            | [[temporal.common/retry-options]] | |
+| :memo                          | Memo fields for the new run                                                                              | Map          | |
+| :search-attributes             | Search attributes for the new run. **Since Temporal Java SDK 1.33:** omitting this carries over the current run's search attributes. Pass an empty map `{}` to explicitly clear them. | Map | carries over (Temporal Java SDK 1.33+) |
+| :initial-versioning-behavior   | Versioning behavior for the new run. `:auto-upgrade` (Temporal Java SDK 1.34): PINNED workflows upgrade to the latest deployment. `:use-ramping-version` (Temporal Java SDK 1.36): pins to the task queue's Ramping Version. | keyword | |
 
 ```clojure
 (defworkflow long-running-workflow

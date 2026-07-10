@@ -7,7 +7,7 @@
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.common.interceptors WorkerInterceptor]
-           [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder]
+           [io.temporal.worker Worker WorkerFactory WorkerFactoryOptions WorkerFactoryOptions$Builder WorkerOptions WorkerOptions$Builder WorkerPlugin]
            [io.temporal.worker.tuning PollerBehavior PollerBehaviorAutoscaling]
            [io.temporal.workflow DynamicWorkflow]
            [temporal.internal.dispatcher DynamicWorkflowProxy]))
@@ -16,10 +16,14 @@
   "
 Initializes a worker instance, suitable for real connections or unit-testing with temporal.testing.env
 "
-  [^Worker worker {:keys [ctx] {:keys [activities workflows] :as dispatch} :dispatch}]
-  (let [dispatch (if (nil? dispatch)
-                   {:activities (a/auto-dispatch) :workflows (w/auto-dispatch)}
-                   {:activities (a/import-dispatch activities) :workflows (w/import-dispatch workflows)})]
+  [^Worker worker {:keys [ctx hot-reload-activities? hot-reload-workflows?] {:keys [activities workflows] :as dispatch} :dispatch}]
+  (let [activity-dispatch-opts {:hot-reload? hot-reload-activities?}
+        workflow-dispatch-opts {:hot-reload? hot-reload-workflows?}
+        dispatch (if (nil? dispatch)
+                   {:activities (a/auto-dispatch activity-dispatch-opts)
+                    :workflows  (w/auto-dispatch workflow-dispatch-opts)}
+                   {:activities (a/import-dispatch activities activity-dispatch-opts)
+                    :workflows  (w/import-dispatch workflows workflow-dispatch-opts)})]
     (log/trace "init:" dispatch)
     (.registerActivitiesImplementations worker (to-array [(a/dispatcher ctx (:activities dispatch))]))
     (.registerWorkflowImplementationFactory worker DynamicWorkflowProxy
@@ -38,15 +42,19 @@ Options for configuring the worker-factory (See [[start]])
 | :enable-logging-in-replay                      |                                                                    | boolean | false       |
 | :max-workflow-thread-count                     | Maximum number of threads available for workflow execution across all workers created by the Factory. | int | 600 |
 | :worker-interceptors                           | Collection of WorkerInterceptors                                   | [WorkerInterceptor](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/interceptors/WorkerInterceptor.html) | |
+| :plugins                                       | Collection of plugins to customize worker behavior (since Temporal Java SDK 1.33).  | [WorkerPlugin](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/worker/WorkerPlugin.html) | |
 | :workflow-cache-size                           | To avoid constant replay of code the workflow objects are cached on a worker. This cache is shared by all workers created by the Factory. | int | 600 |
 | :using-virtual-workflow-threads                | Use Virtual Threads for all workflow threads across all workers created by this factory. This option is only supported for JDK >= 21. If set then :max-workflow-thread-count is ignored. | boolean | false       |
+| :shutdown-check-interval                       | Polling interval used during graceful shutdown to check whether all tasks have drained. **Test-only** — Temporal discourages changing this in production; it is useful for speeding up worker shutdown in unit tests. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 50ms |
 "
 
   {:enable-logging-in-replay             #(.setEnableLoggingInReplay ^WorkerFactoryOptions$Builder %1 %2)
    :max-workflow-thread-count            #(.setMaxWorkflowThreadCount ^WorkerFactoryOptions$Builder %1 %2)
    :worker-interceptors                  #(.setWorkerInterceptors ^WorkerFactoryOptions$Builder %1 (into-array WorkerInterceptor %2))
+   :plugins                              #(.setPlugins ^WorkerFactoryOptions$Builder %1 (into-array WorkerPlugin %2))
    :workflow-cache-size                  #(.setWorkflowCacheSize ^WorkerFactoryOptions$Builder %1 %2)
-   :using-virtual-workflow-threads       #(.setUsingVirtualWorkflowThreads ^WorkerFactoryOptions$Builder %1 %2)})
+   :using-virtual-workflow-threads       #(.setUsingVirtualWorkflowThreads ^WorkerFactoryOptions$Builder %1 %2)
+   :shutdown-check-interval              #(.setShutdownCheckInterval ^WorkerFactoryOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-factory-options->
   ^WorkerFactoryOptions [params]
@@ -65,10 +73,11 @@ Options for configuring the worker-factory (See [[start]])
     (map? behavior)
     (let [{:keys [type min-pollers max-pollers]} behavior]
       (case type
+        ;; PollerBehaviorAutoscaling is immutable (no setters) - min/max/initial pollers are only
+        ;; configurable via its 3-arg constructor. A `nil` component defaults to the SDK's own
+        ;; built-in default (1/100/5 respectively; see PollerBehaviorAutoscaling's no-arg ctor).
         :autoscaling
-        (cond-> (PollerBehaviorAutoscaling.)
-          min-pollers (.setMinPollers min-pollers)
-          max-pollers (.setMaxPollers max-pollers))
+        (PollerBehaviorAutoscaling. (some-> min-pollers int) (some-> max-pollers int) nil)
         (throw (IllegalArgumentException. (str "Unknown poller behavior type: " type)))))
 
     :else
@@ -83,6 +92,8 @@ Options for configuring workers (See [[start]])
 | :task-queue                                     | y         | The name of the task-queue for this worker instance to listen on.                                                                                                                                                                                 | String / keyword                                                               |                                                             |
 | :ctx                                            |           | An opaque handle that is passed back as the first argument of [[temporal.workflow/defworkflow]] and [[temporal.activity/defactivity]], useful for passing state such as database or network connections.                                          | <any>                                                                          | nil                                                         |
 | :dispatch                                       |           | An optional map explicitly setting the dispatch table                                                                                                                                                                                             | See below                                                                      | All visible activities/workers are automatically registered |
+| :hot-reload-activities?                         |           | When true, stores activity Vars in the dispatch table and dereferences them at execution time. Intended for development / REPL use.                                                                                                               | boolean                                                                        | false                                                       |
+| :hot-reload-workflows?                          |           | When true, stores workflow Vars in the dispatch table and dereferences them at execution time. Development-only; changing workflow code can break Temporal replay determinism.                                                                     | boolean                                                                        | false                                                       |
 | :default-deadlock-detection-timeout             |           | Time period in ms that will be used to detect workflow deadlock.                                                                                                                                                                                  | long                                                                           | 1000                                                        |
 | :default-heartbeat-throttle-interval            |           | Default amount of time between sending each pending heartbeat.                                                                                                                                                                                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 30s                                                         |
 | :local-activity-worker-only                     |           | Worker should only handle workflow tasks and local activities.                                                                                                                                                                                    | boolean                                                                        | false                                                       |
@@ -105,6 +116,7 @@ Options for configuring workers (See [[start]])
 | :workflow-task-pollers-behavior                 |           | Configures poller scaling behavior for workflow tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
 | :activity-task-pollers-behavior                 |           | Configures poller scaling behavior for activity tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
 | :nexus-task-pollers-behavior                    |           | Configures poller scaling behavior for nexus tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                    | keyword / map                                                                  |                                                             |
+| :allow-activity-heartbeat-during-shutdown       |           | When true, removes the restriction on activity heartbeats during graceful shutdown. **Trade-off:** enabling this makes `ActivityWorkerShutdownException` undetectable — activities can no longer distinguish normal heartbeat failure from worker shutdown. | boolean | false |
 
 #### dispatch-table
 
@@ -142,7 +154,8 @@ Options for configuring workers (See [[start]])
    :using-virtual-threads-on-workflow-worker         #(.setUsingVirtualThreadsOnWorkflowWorker ^WorkerOptions$Builder %1 %2)
    :workflow-task-pollers-behavior                   #(.setWorkflowTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
    :activity-task-pollers-behavior                   #(.setActivityTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
-   :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))})
+   :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
+   :allow-activity-heartbeat-during-shutdown         #(.setAllowActivityHeartbeatDuringShutdown ^WorkerOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-options->
   ^WorkerOptions [params]

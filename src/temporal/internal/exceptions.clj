@@ -10,8 +10,9 @@
 (def exception-type (name ::slingshot))
 
 (defn slingshot? [ex]
-  (and (instance? ApplicationFailure (ex-cause ex))
-       (= exception-type (.getType (cast ApplicationFailure (ex-cause ex))))))
+  (let [^ApplicationFailure cause (ex-cause ex)]
+    (and (instance? ApplicationFailure cause)
+         (= exception-type (.getType cause)))))
 
 (defn forward
   [{:keys [message wrapper] {:keys [::e/non-retriable?] :or {non-retriable? false} :as object} :object :as context}]
@@ -37,5 +38,6 @@
         (throw t)))))
 
 (defn recast-stone [ex]
-  (let [stone (->> ex ex-cause (cast ApplicationFailure) (.getDetails) u/->args :object)]
+  (let [^ApplicationFailure af (->> ex ex-cause (cast ApplicationFailure))
+        stone (->> (.getDetails af) u/->args :object)]
     (throw+ stone)))                                        ;; FIXME: Does not preserve the original stack-trace
