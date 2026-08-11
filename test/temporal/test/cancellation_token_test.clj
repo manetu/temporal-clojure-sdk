@@ -5,7 +5,8 @@
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]
-            [temporal.test.utils :as t]))
+            [temporal.test.utils :as t])
+  (:import [io.temporal.common CancellationToken]))
 
 (use-fixtures :once t/wrap-service)
 
@@ -13,7 +14,10 @@
   [_ _]
   (let [token (a/get-cancellation-token)]
     {:cancelled?        (a/cancellation-requested? token)
-     :future-present?   (some? (a/cancellation-future token))}))
+     :future-present?   (some? (a/cancellation-future token))
+     ;; Pins the Temporal Java SDK 1.38 migration from the deleted
+     ;; io.temporal.activity.ActivityCancellationToken to this generic type.
+     :token-class?      (instance? CancellationToken token)}))
 
 (defworkflow cancellation-token-workflow
   [_]
@@ -25,4 +29,5 @@
       (c/start workflow {})
       (let [result (-> workflow c/get-result deref)]
         (is (false? (:cancelled? result)))
-        (is (true? (:future-present? result)))))))
+        (is (true? (:future-present? result)))
+        (is (true? (:token-class? result)))))))

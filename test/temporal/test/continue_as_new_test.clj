@@ -7,7 +7,8 @@
             [temporal.client.core :as c]
             [temporal.testing.env :as e]
             [temporal.workflow :refer [defworkflow] :as w]
-            [temporal.test.utils :as t]))
+            [temporal.test.utils :as t])
+  (:import [io.temporal.workflow Workflow]))
 
 (use-fixtures :once t/wrap-service)
 
@@ -132,3 +133,29 @@
     (let [workflow (t/create-workflow can-use-ramping-version-workflow)]
       (c/start workflow {:iteration 1})
       (is (= @(c/get-result workflow) {:completed true :iteration 2})))))
+
+;;-----------------------------------------------------------------------------
+;; Memo propagation test (Temporal Java SDK 1.37+)
+;;
+;; A workflow that explicitly sets :memo on continue-as-new could not read it
+;; back on the new run under the in-process test environment, even though it
+;; worked against a real server (the memo carried search attributes and
+;; headers across CAN, but dropped the memo). Temporal Java SDK 1.37 fixed the
+;; test server to match real-server behavior. Note this is unlike
+;; :search-attributes, which carries over automatically when *omitted* (see
+;; the carryover tests above) — :memo must be explicitly set on each
+;; continue-as-new call.
+;;-----------------------------------------------------------------------------
+
+(defworkflow can-memo-carryover-workflow
+  [{:keys [iteration]}]
+  (log/info "can-memo-carryover-workflow: iteration" iteration)
+  (if (= iteration 1)
+    (w/continue-as-new {:iteration 2} {:memo {"note" "carried-over"}})
+    {:completed true :iteration iteration :memo (Workflow/getMemo "note" String)}))
+
+(deftest memo-carryover-test
+  (testing "continue-as-new with an explicit :memo is visible on the new run (Temporal Java SDK 1.37+)"
+    (let [workflow (t/create-workflow can-memo-carryover-workflow)]
+      (c/start workflow {:iteration 1})
+      (is (= @(c/get-result workflow) {:completed true :iteration 2 :memo "carried-over"})))))

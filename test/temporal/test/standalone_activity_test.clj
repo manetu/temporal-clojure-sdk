@@ -192,21 +192,28 @@
       (is (= "my details" (.getStaticDetails opts))))))
 
 ;;; -----------------------------------------------------------------------
-;;; 3. start-untyped-handle — error path and reflection happy path
+;;; 3. start-untyped-handle / get-handle — dispatch against a real ActivityClient
 ;;; -----------------------------------------------------------------------
+;;; ActivityClient declares the untyped start(String, StartActivityOptions, Object...)
+;;; and getHandle(String, String) overloads directly on the public interface (since
+;;; Temporal Java SDK 1.36), so no reflection is required to reach either.
 
-(deftest test-start-untyped-handle-no-method
-  (testing "throws when the client class lacks the untyped start method"
-    (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                          #"does not expose an untyped start method"
-                          (ac/start-untyped-handle :not-a-client "act" {:task-queue "q"} {})))))
+(deftest test-start-untyped-handle-rejects-non-client
+  (testing "throws when passed something other than an ActivityClient"
+    ;; Under a plain (hinted) build this is a ClassCastException from the direct
+    ;; interop call; under cloverage — which strips inline ^Type hints during
+    ;; instrumentation (see CLAUDE.md) — the same call falls back to reflection
+    ;; and throws IllegalArgumentException instead. Assert the common supertype
+    ;; so the test is correct under both.
+    (is (thrown? Exception
+                 (ac/start-untyped-handle :not-a-client "act" {:task-queue "q"} {})))))
 
-(deftest test-start-untyped-handle-method-found
-  (testing "find-untyped-start-method locates the untyped start on a real ActivityClientImpl"
-    ;; TestWorkflowEnvironment exposes a service stub we can use to build
-    ;; a real ActivityClient.  The reflection must find the method and invoke
-    ;; it; the test server does not implement StartActivityExecution, so the
-    ;; gRPC call throws — but the method-finding and invoke paths are covered.
+(deftest test-start-untyped-handle-real-client
+  (testing "start-untyped-handle dispatches to a real ActivityClient"
+    ;; TestWorkflowEnvironment exposes a service stub we can use to build a real
+    ;; ActivityClient. The test server does not implement StartActivityExecution,
+    ;; so the gRPC call throws — but the dispatch path (option building + the
+    ;; direct .start interop call) is covered.
     (let [env    (e/create {})
           stubs  (.getWorkflowServiceStubs (e/get-client env))
           client (ActivityClient/newInstance stubs (copts/activity-client-options-> {}))]
@@ -215,6 +222,43 @@
                      (ac/start-untyped-handle client "act" {:task-queue "q"} {})))
         (finally
           (e/stop env))))))
+
+(deftest test-get-handle-real-client
+  (testing "get-handle constructs a real UntypedActivityHandle without an RPC"
+    ;; Unlike start-untyped-handle, getHandle is purely client-side (it just wraps
+    ;; the given IDs), so this succeeds even against the in-memory test server.
+    (let [env    (e/create {})
+          stubs  (.getWorkflowServiceStubs (e/get-client env))
+          client (ActivityClient/newInstance stubs (copts/activity-client-options-> {}))]
+      (try
+        (let [h1 (ac/get-handle client "act-id")
+              h2 (ac/get-handle client "act-id" "run-id")]
+          (is (= "act-id" (.getActivityId ^UntypedActivityHandle h1)))
+          (is (nil? (.getActivityRunId ^UntypedActivityHandle h1)))
+          (is (= "act-id" (.getActivityId ^UntypedActivityHandle h2)))
+          (is (= "run-id" (.getActivityRunId ^UntypedActivityHandle h2))))
+        (finally
+          (e/stop env))))))
+
+;;; -----------------------------------------------------------------------
+;;; 3b. Public get-handle (temporal.client.activity) — reattach to a handle map
+;;; -----------------------------------------------------------------------
+
+(deftest test-public-get-handle
+  (testing "get-handle returns the same handle-map shape as start, for cancel/terminate/describe"
+    (with-redefs [ac/get-handle (fn [_ act-id & _run-id] (make-mock-handle {:reattached act-id}))]
+      (let [handle (ca/get-handle :mock-client "my-act-id")]
+        (is (= "mock-act-id" (:activity-id handle)))
+        (is (= "mock-run-id" (:activity-run-id handle)))
+        (is (some? (:handle handle)))
+        (is (= {:reattached "my-act-id"} @(:result handle)))))))
+
+(deftest test-public-get-handle-with-run-id
+  (testing "get-handle (3-arg) passes activity-run-id through to the internal helper"
+    (let [captured-args (atom nil)]
+      (with-redefs [ac/get-handle (fn [& args] (reset! captured-args args) (make-mock-handle {}))]
+        (ca/get-handle :mock-client "my-act-id" "my-run-id")
+        (is (= '(:mock-client "my-act-id" "my-run-id") @captured-args))))))
 
 ;;; -----------------------------------------------------------------------
 ;;; 4. Happy path — execute (sync)

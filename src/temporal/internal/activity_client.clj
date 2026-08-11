@@ -50,35 +50,19 @@
     (a/get-annotation activity)
     (u/namify activity)))
 
-;; ActivityClient interface exposes only typed overloads.  The implementation
-;; (ActivityClientImpl) additionally provides an untyped
-;; start(String, StartActivityOptions, Object...) method.  We locate it once
-;; per concrete class and cache the Method for subsequent calls.
-(defonce ^:private untyped-start-cache (atom {}))
-
-(defn- find-untyped-start-method
-  [^Class client-class]
-  (or (get @untyped-start-cache client-class)
-      (let [m (->> (.getMethods client-class)
-                   (filter (fn [^java.lang.reflect.Method m]
-                             (let [^"[Ljava.lang.Class;" params (.getParameterTypes m)]
-                               (and (= "start" (.getName m))
-                                    (= 3 (alength params))
-                                    (= String (aget params 0))
-                                    (= StartActivityOptions (aget params 1))))))
-                   first)]
-        (when m (.setAccessible ^java.lang.reflect.Method m true))
-        (swap! untyped-start-cache assoc client-class m)
-        m)))
-
+;; ActivityClient declares the untyped start(String, StartActivityOptions, Object...)
+;; overload directly on the public interface, so no reflection is required to reach it.
 (defn start-untyped-handle
   "Dispatches an activity by name string using ActivityClient's untyped start overload.
   Returns a UntypedActivityHandle."
   ^UntypedActivityHandle [^ActivityClient client ^String activity-name opts args]
-  (let [options (start-activity-options-> opts)
-        m       (find-untyped-start-method (class client))]
-    (when-not m
-      (throw (ex-info "ActivityClient does not expose an untyped start method; requires temporal-shaded >= 1.36.0"
-                      {:client-class (class client)})))
-    (.invoke ^java.lang.reflect.Method m client
-             (into-array Object [activity-name options (into-array Object [args])]))))
+  (let [options (start-activity-options-> opts)]
+    (.start client activity-name options (u/->objarray args))))
+
+(defn get-handle
+  "Returns a handle to a previously-started Standalone Activity, identified by activity-id
+  and (optionally) activity-run-id."
+  (^UntypedActivityHandle [^ActivityClient client ^String activity-id]
+   (.getHandle client activity-id nil))
+  (^UntypedActivityHandle [^ActivityClient client ^String activity-id activity-run-id]
+   (.getHandle client activity-id ^String activity-run-id)))

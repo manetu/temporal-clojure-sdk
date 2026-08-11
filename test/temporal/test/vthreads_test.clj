@@ -65,4 +65,14 @@
         (let [pthreads (:platform-threads (execute {} {:using-virtual-threads false}))]
           (is (every? #(substring-in-coll? % pthreads)
                       ["Workflow Executor" "Activity Executor"
-                       "Workflow Poller"   "Activity Poller"])))))))
+                       "Workflow Poller"   "Activity Poller"]))))
+
+      (testing "Verifies that :using-virtual-threads-on-workflow-worker alone (Activity worker left unset) turns only the Workflow Executor/Poller virtual (Temporal Java SDK 1.38+)"
+        ;; Prior to Temporal Java SDK 1.38, WorkerOptions.isUsingVirtualThreadsOnWorkflowWorker()
+        ;; returned the *activity* worker's flag (#2957), so setting only this option was silently
+        ;; a no-op: the Workflow Executor/Poller pools stayed on platform threads.
+        (let [pthreads (:platform-threads (execute {} {:using-virtual-threads-on-workflow-worker true}))]
+          (is (not-any? #(substring-in-coll? % pthreads)
+                        ["Workflow Executor" "Workflow Poller"]))
+          (is (every? #(substring-in-coll? % pthreads)
+                      ["Activity Executor" "Activity Poller"])))))))

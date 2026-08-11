@@ -140,7 +140,7 @@
 
 (defn ->objarray
   "Serializes x to an array of Objects, suitable for many Temporal APIs"
-  [x]
+  ^"[Ljava.lang.Object;" [x]
   (into-array object-type [x]))
 
 (defn ->args

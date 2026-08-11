@@ -45,6 +45,17 @@
    (let [service (copts/service-stub-> options timeout)]
      (ActivityClient/newInstance service (copts/activity-client-options-> options)))))
 
+(defn- handle->map
+  [^UntypedActivityHandle handle]
+  {:activity-id     (.getActivityId handle)
+   :activity-run-id (.getActivityRunId handle)
+   :result          (-> (.getResultAsync handle u/object-type)
+                        (p/catch e/slingshot? e/recast-stone)
+                        (p/catch (fn [e]
+                                   (log/error e)
+                                   (throw e))))
+   :handle          handle})
+
 (defn start
   "Starts a Standalone Activity asynchronously, returning a handle map immediately.
 
@@ -113,14 +124,7 @@
    (let [act-name (ac/resolve-activity-name activity)
          handle   (ac/start-untyped-handle client act-name options params)]
      (log/trace "start:" act-name "options:" options)
-     {:activity-id     (.getActivityId ^UntypedActivityHandle handle)
-      :activity-run-id (.getActivityRunId ^UntypedActivityHandle handle)
-      :result          (-> (.getResultAsync ^UntypedActivityHandle handle u/object-type)
-                           (p/catch e/slingshot? e/recast-stone)
-                           (p/catch (fn [e]
-                                      (log/error e)
-                                      (throw e))))
-      :handle          handle})))
+     (handle->map handle))))
 
 (defn execute
   "Executes a Standalone Activity synchronously, blocking until it completes.
@@ -147,6 +151,30 @@
          handle   (ac/start-untyped-handle client act-name options params)]
      (log/trace "execute:" act-name "options:" options)
      (.getResult ^UntypedActivityHandle handle u/object-type))))
+
+(defn get-handle
+  "Returns a handle map for a previously-started Standalone Activity, identified by
+  `activity-id` and (optionally) `activity-run-id`.
+
+  Useful for reattaching to an activity started elsewhere — e.g. a different process — or for
+  calling [[cancel]], [[terminate]], or [[describe]] without holding on to the handle map
+  originally returned by [[start]].
+
+  Arguments:
+
+  - `client`: An `ActivityClient` created with [[create-client]]
+  - `activity-id`: The activity ID to reattach to
+  - `activity-run-id`: Optional run ID; when omitted, the client resolves the current run
+
+  ```clojure
+  (let [h (get-handle client \"my-activity-id\")]
+    (describe h))
+  ```
+  "
+  ([client activity-id]
+   (handle->map (ac/get-handle client activity-id)))
+  ([client activity-id activity-run-id]
+   (handle->map (ac/get-handle client activity-id activity-run-id))))
 
 (defn cancel
   "Requests cancellation of a Standalone Activity identified by `handle`.

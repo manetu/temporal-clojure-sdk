@@ -98,6 +98,8 @@ The traditional way to detect activity cancellation is to call [`heartbeat`](htt
 
 Temporal Java SDK 1.36 introduced [`get-cancellation-token`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#get-cancellation-token), which provides cancellation detection **without** requiring a heartbeat. This is useful for activities that do not otherwise heartbeat.
 
+The underlying Java type backing this token was renamed in Temporal Java SDK 1.38, from `io.temporal.activity.ActivityCancellationToken` to the generic `io.temporal.common.CancellationToken`. This is transparent to callers of this wrapper — [`cancellation-requested?`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#cancellation-requested?), [`throw-if-cancelled!`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#throw-if-cancelled!), and [`cancellation-future`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#cancellation-future) are unaffected.
+
 > **Note:** Cancellation delivery via this API requires a recent Temporal server version.
 
 Use the native helper functions to interact with the token without Java interop:
