@@ -28,7 +28,9 @@
    :cron-schedule              #(.setCronSchedule ^ChildWorkflowOptions$Builder %1 ^String %2)
    :cancellation-type          #(.setCancellationType ^ChildWorkflowOptions$Builder %1 (cancellation-type-> %2))
    :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)
-   :priority                   #(.setPriority ^ChildWorkflowOptions$Builder %1 (common/priority-options-> %2))})
+   :priority                   #(.setPriority ^ChildWorkflowOptions$Builder %1 (common/priority-options-> %2))
+   :static-summary             #(.setStaticSummary ^ChildWorkflowOptions$Builder %1 %2)
+   :static-details             #(.setStaticDetails ^ChildWorkflowOptions$Builder %1 %2)})
 
 (defn child-workflow-options->
   ^ChildWorkflowOptions [options]

@@ -72,7 +72,9 @@
    :memo                        #(.setMemo ^WorkflowOptions$Builder %1 %2)
    :search-attributes           #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
    :start-delay                 #(.setStartDelay ^WorkflowOptions$Builder %1 %2)
-   :priority                    #(.setPriority ^WorkflowOptions$Builder %1 (common/priority-options-> %2))})
+   :priority                    #(.setPriority ^WorkflowOptions$Builder %1 (common/priority-options-> %2))
+   :static-summary              #(.setStaticSummary ^WorkflowOptions$Builder %1 %2)
+   :static-details              #(.setStaticDetails ^WorkflowOptions$Builder %1 %2)})
 
 (defn ^:no-doc wf-options->
   ^WorkflowOptions [params]

@@ -8,12 +8,13 @@
    [temporal.common :as common]
    [temporal.internal.child-workflow :as cw]
    [temporal.internal.exceptions :as e]
+   [temporal.internal.promise :as ip]
    [temporal.internal.search-attributes :as sa]
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w])
   (:import [io.temporal.api.common.v1 WorkflowExecution]
            [io.temporal.common InitialVersioningBehavior]
-           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
+           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub TimerOptions TimerOptions$Builder Workflow WorkflowLock]
            [java.util.function Supplier]
            [java.time Duration])
   (:refer-clojure :exclude [await]))
@@ -40,6 +41,60 @@
   "Efficiently parks the workflow for 'duration'"
   [^Duration duration]
   (Workflow/sleep duration))
+
+(def ^:no-doc timer-options-spec
+  {:summary #(.setSummary ^TimerOptions$Builder %1 %2)})
+
+(defn ^:no-doc timer-options->
+  ^TimerOptions [options]
+  (u/build (TimerOptions/newBuilder (TimerOptions/getDefaultInstance)) timer-options-spec options))
+
+(defn new-timer
+  "
+Starts a timer for 'duration' and returns a promise that resolves once it fires.
+
+Unlike [[sleep]], this does not block the workflow thread while the timer is pending — compose the
+returned promise with other promises (e.g. [[temporal.promise/race]]) to wait on a timer alongside
+other work.
+
+Arguments:
+
+- `duration`: How long the timer should run, as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html)
+- `options`: (optional) Options map to customize the timer (see below)
+
+#### options map
+
+| Value     | Description                                                    | Type   | Default |
+| --------- | --------------------------------------------------------------| ------ | ------- |
+| :summary  | Single-line fixed summary shown in UI/CLI (Temporal Markdown) | String | |
+
+```clojure
+(let [timer (new-timer (Duration/ofMinutes 5) {:summary \"cooldown\"})]
+  @timer)
+```
+"
+  ([^Duration duration] (new-timer duration {}))
+  ([^Duration duration options]
+   (ip/->PromiseAdapter (Workflow/newTimer duration (timer-options-> options)))))
+
+(defn set-current-details
+  "
+Sets the current details for this workflow execution, visible in the UI/CLI while the workflow is
+running. Unlike a static summary, this may be updated freely as the workflow progresses.
+
+Introduced in Temporal Java SDK 1.36; stabilized (dropped `@Experimental`) in 1.38.
+
+```clojure
+(set-current-details \"awaiting approval from finance\")
+```
+"
+  [^String details]
+  (Workflow/setCurrentDetails details))
+
+(defn get-current-details
+  "Returns the current details most recently set with [[set-current-details]], or `nil` if unset."
+  []
+  (Workflow/getCurrentDetails))
 
 (def default-version (int Workflow/DEFAULT_VERSION))
 
@@ -214,6 +269,9 @@ Arguments:
 | :cron-schedule              | A cron schedule string                                                                     | String | |
 | :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
 | :memo                       | Specifies additional non-indexed information in result of list workflow                    | String | |
+| :priority                   | Priority/fairness options (see [[temporal.common/priority-options]])                       | map | |
+| :static-summary             | Single-line fixed summary shown in UI/CLI (Temporal Markdown); cannot be updated after start | String | |
+| :static-details             | Multi-line fixed details shown in UI/CLI (Temporal Markdown); cannot be updated after start  | String | |
 
 #### cancellation types
 

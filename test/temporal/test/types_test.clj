@@ -5,6 +5,7 @@
             [same.core :refer [ish?]]
             [temporal.client.worker :as worker]
             [temporal.client.options :as o]
+            [temporal.internal.activity :as a]
             [temporal.internal.workflow :as w]
             [temporal.internal.schedule :as s]
             [temporal.internal.child-workflow :as cw])
@@ -25,12 +26,16 @@
                              :search-attributes {"foo" "bar"}
                              :priority {:priority-key 5
                                         :fairness-key :premium
-                                        :fairness-weight 3.14}})]
+                                        :fairness-weight 3.14}
+                             :static-summary "summary"
+                             :static-details "details"})]
       (is (-> x (.getWorkflowId) (= "foo")))
       (is (-> x (.getTaskQueue) (= "bar")))
       (is (-> x (.getPriority) (.getPriorityKey) (= 5)))
       (is (-> x (.getPriority) (.getFairnessKey) (= "premium")))
-      (is (ish? (-> x (.getPriority) (.getFairnessWeight)) 3.14)))))
+      (is (ish? (-> x (.getPriority) (.getFairnessWeight)) 3.14))
+      (is (= "summary" (-> x (.getStaticSummary))))
+      (is (= "details" (-> x (.getStaticDetails)))))))
 
 (deftest client-options
   (testing "Verify that our stub options work"
@@ -71,8 +76,22 @@
                                       :max-heartbeat-throttle-interval                 (Duration/ofSeconds 10)
                                       :local-activity-worker-only                      false
                                       :max-taskqueue-activities-per-second             1.0
-                                      :max-workers-activities-per-second               1.0})]
-      (is (-> x (.isLocalActivityWorkerOnly) false?)))))
+                                      :max-workers-activities-per-second               1.0
+                                      :disable-eager-execution                         true
+                                      :max-eager-activity-reservations-per-workflow-task 5})]
+      (is (-> x (.isLocalActivityWorkerOnly) false?))
+      (is (-> x (.isEagerExecutionDisabled) true?))
+      (is (= 5 (-> x (.getMaxEagerActivityReservationsPerWorkflowTask)))))))
+
+(deftest activity-options
+  (testing "Verify that our activity options work"
+    (let [x (a/invoke-options-> {:start-to-close-timeout (Duration/ofSeconds 1)
+                                 :summary "summary"})]
+      (is (= "summary" (-> x (.getSummary))))))
+  (testing "Verify that our local activity options work"
+    (let [x (a/local-invoke-options-> {:start-to-close-timeout (Duration/ofSeconds 1)
+                                       :summary "summary"})]
+      (is (= "summary" (-> x (.getSummary)))))))
 
 (deftest schedule-client-options
   (testing "Verify that our stub options work"
@@ -149,7 +168,9 @@
                    :cancellation-type :abandon
                    :priority {:priority-key 5
                               :fairness-key :premium
-                              :fairness-weight 3.14}}
+                              :fairness-weight 3.14}
+                   :static-summary "summary"
+                   :static-details "details"}
           child-workflow-options (cw/child-workflow-options-> options)]
       (is (some? child-workflow-options))
       (is (= "foo" (-> child-workflow-options .getWorkflowId)))
@@ -168,7 +189,9 @@
              (-> child-workflow-options .getCancellationType)))
       (is (-> child-workflow-options (.getPriority) (.getPriorityKey) (= 5)))
       (is (-> child-workflow-options (.getPriority) (.getFairnessKey) (= "premium")))
-      (is (ish? (-> child-workflow-options (.getPriority) (.getFairnessWeight)) 3.14)))))
+      (is (ish? (-> child-workflow-options (.getPriority) (.getFairnessWeight)) 3.14))
+      (is (= "summary" (-> child-workflow-options (.getStaticSummary))))
+      (is (= "details" (-> child-workflow-options (.getStaticDetails)))))))
 
 (deftest api-key-tls-options
   (testing "API key alone auto-enables TLS (Temporal Java SDK 1.33+ behavior)"

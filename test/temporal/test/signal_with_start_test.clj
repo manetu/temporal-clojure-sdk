@@ -7,7 +7,8 @@
             [temporal.signals :refer [<!] :as s]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]
-            [temporal.test.utils :as t]))
+            [temporal.test.utils :as t])
+  (:import [io.temporal.workflow Workflow]))
 
 (use-fixtures :once t/wrap-service)
 
@@ -30,3 +31,24 @@
     (let [workflow (t/create-workflow signal-greeter-workflow)]
       (c/signal-with-start workflow signal-name {:name "Bob"} {:greeting "Hi"})
       (is (= @(c/get-result workflow) "Hi, Bob")))))
+
+;;-----------------------------------------------------------------------------
+;; Priority propagation test (Temporal Java SDK 1.38+)
+;;
+;; WorkflowOptions.priority was previously dropped by signalWithStart; it now
+;; propagates to the started run, matching plain `start`.
+;;-----------------------------------------------------------------------------
+
+(defworkflow signal-priority-workflow
+  [_args]
+  (let [signals (s/create-signal-chan)]
+    (<! signals signal-name)
+    (-> (Workflow/getInfo) .getPriority .getPriorityKey)))
+
+(deftest priority-propagation-test
+  (testing "Verifies that :priority set at create-workflow propagates through signal-with-start (Temporal Java SDK 1.38+)"
+    (let [workflow (c/create-workflow (t/get-client) signal-priority-workflow
+                                      {:task-queue t/task-queue
+                                       :priority {:priority-key 7}})]
+      (c/signal-with-start workflow signal-name {} {})
+      (is (= @(c/get-result workflow) 7)))))
