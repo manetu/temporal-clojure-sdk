@@ -4,7 +4,7 @@
   (:require [clojure.core.async :refer [<! go] :as async]
             [clojure.core.protocols :as p]
             [clojure.datafy :as d]
-            [slingshot.slingshot :refer [try+]]
+            [clj-commons.slingshot :refer [try+]]
             [taoensso.timbre :as log]
             [temporal.common :as common]
             [temporal.internal.exceptions :as e]

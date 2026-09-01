@@ -3,7 +3,7 @@
 (ns temporal.test.slingshot-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [taoensso.timbre :as log]
-            [slingshot.slingshot :refer [try+ throw+]]
+            [clj-commons.slingshot :refer [try+ throw+]]
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a]

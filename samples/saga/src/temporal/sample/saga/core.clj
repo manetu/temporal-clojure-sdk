@@ -7,7 +7,7 @@
   - Handling failures and executing compensations in reverse order
   - Using slingshot for structured error handling"
   (:require [taoensso.timbre :as log]
-            [slingshot.slingshot :refer [throw+ try+]]
+            [clj-commons.slingshot :refer [throw+ try+]]
             [temporal.workflow :refer [defworkflow]]
             [temporal.activity :refer [defactivity] :as a])
   (:import [java.time Duration]))

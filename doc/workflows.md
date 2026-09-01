@@ -468,7 +468,7 @@ Use [temporal.workflow/get-execution](https://cljdoc.org/d/io.github.manetu/temp
 
 ## Exceptions
 
-This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
+This SDK integrates with the [slingshot](https://github.com/clj-commons/slingshot) library. Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
 
 ### Managing Retries
 By default, stones cast that are not caught locally by an Activity or Workflow trigger ApplicationFailure semantics and are thus subject to the overall Retry Policies in place.   However, the developer may force a given stone to be non-retriable by setting the flag '::non-retriable?' within the object.
@@ -477,7 +477,7 @@ Example:
 
 ```clojure
 (require `[temporal.exceptions :as e])
-(require `[slingshot.slingshot :refer [throw+]])
+(require `[clj-commons.slingshot :refer [throw+]])
 
 (defactivity my-activity
    [ctx args]
