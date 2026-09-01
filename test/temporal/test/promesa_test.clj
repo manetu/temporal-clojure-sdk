@@ -3,7 +3,7 @@
 (ns temporal.test.promesa-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
             [promesa.core :as p]
-            [slingshot.slingshot :refer [throw+]]
+            [clj-commons.slingshot :refer [throw+]]
             [taoensso.timbre :as log]
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow]]

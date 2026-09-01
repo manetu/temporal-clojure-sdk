@@ -2,7 +2,7 @@
 
 (ns temporal.test.reuse-policy-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
-            [slingshot.slingshot :refer [try+ throw+]]
+            [clj-commons.slingshot :refer [try+ throw+]]
             [taoensso.timbre :as log]
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow] :as w]

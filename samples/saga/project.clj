@@ -2,7 +2,7 @@
   :description "Demonstrates the Saga pattern for distributed transactions with compensation"
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [io.github.manetu/temporal-sdk "1.6.0-SNAPSHOT"]
-                 [slingshot "0.12.2"]
+                 [org.clj-commons/slingshot "0.13.0"]
                  [environ "1.2.0"]]
   :main ^:skip-aot temporal.sample.saga.main
   :target-path "target/%s"

@@ -22,7 +22,7 @@
                  [funcool/promesa "11.0.678"]
                  [metosin/jsonista "0.3.13"]
                  [medley "1.4.0"]
-                 [slingshot "0.12.2"]]
+                 [org.clj-commons/slingshot "0.13.0"]]
   :repl-options {:init-ns user}
   :java-source-paths ["src" "resources"]
   :javac-options ["-target" "11" "-source" "11"]

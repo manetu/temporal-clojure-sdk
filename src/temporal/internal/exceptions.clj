@@ -1,7 +1,7 @@
 ;; Copyright © 2024 Manetu, Inc.  All rights reserved
 
 (ns ^:no-doc temporal.internal.exceptions
-  (:require [slingshot.slingshot :refer [throw+]]
+  (:require [clj-commons.slingshot :refer [throw+]]
             [taoensso.timbre :as log]
             [temporal.exceptions :as e]
             [temporal.internal.utils :as u])
