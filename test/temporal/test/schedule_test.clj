@@ -161,3 +161,47 @@
              (-> (s/schedule-> update-options)
                  (.getSpec)
                  (.getCronExpressions)))))))
+
+(deftest reschedule-updates-search-attributes-test
+  (testing "reschedule updates schedule-level search attributes"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)
+          update-options (stub-schedule-options
+                          :schedule {:search-attributes {"foo" {:type :keyword :value "updated"}}})
+          schedule-update-input (ScheduleUpdateInput.
+                                 (ScheduleDescription.
+                                  schedule-id
+                                  nil
+                                  (s/schedule-> (stub-schedule-options))
+                                  nil
+                                  nil
+                                  nil
+                                  nil))]
+      (schedule/reschedule client schedule-id update-options)
+      (is (= (-> (get-in @state [:update :update-fn])
+                 (.apply schedule-update-input)
+                 (.getTypedSearchAttributes)
+                 sa/search-attributes->map
+                 (get "foo")
+                 :value)
+             "updated")))))
+
+(deftest reschedule-preserves-search-attributes-test
+  (testing "reschedule without :search-attributes leaves typed search attributes unset"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)
+          update-options (-> (stub-schedule-options :spec {:cron-expressions ["1 * * * *"]})
+                             (update :schedule dissoc :search-attributes))
+          schedule-update-input (ScheduleUpdateInput.
+                                 (ScheduleDescription.
+                                  schedule-id
+                                  nil
+                                  (s/schedule-> (stub-schedule-options))
+                                  nil
+                                  nil
+                                  nil
+                                  nil))]
+      (schedule/reschedule client schedule-id update-options)
+      (is (nil? (-> (get-in @state [:update :update-fn])
+                    (.apply schedule-update-input)
+                    (.getTypedSearchAttributes)))))))

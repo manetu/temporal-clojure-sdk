@@ -4,7 +4,9 @@
             [temporal.client.core :as c]
             [temporal.workflow :refer [defworkflow] :as w]
             [temporal.activity :refer [defactivity] :as a]
-            [temporal.test.utils :as t]))
+            [temporal.internal.search-attributes :as sa]
+            [temporal.test.utils :as t])
+  (:import [io.temporal.workflow Workflow]))
 
 (use-fixtures :once t/wrap-service)
 
@@ -42,3 +44,19 @@
     (let [workflow (t/create-workflow parent-workflow-with-activities)]
       (c/start workflow {:names ["Bob" "George" "Fred"]})
       (is (= (set @(c/get-result workflow)) #{"Hi, Bob" "Hi, George" "Hi, Fred" "Hi, Xavier"})))))
+
+(defworkflow child-search-attributes-workflow
+  [_]
+  (sa/search-attributes->map (Workflow/getTypedSearchAttributes)))
+
+(defworkflow parent-search-attributes-workflow
+  [args]
+  @(w/invoke child-search-attributes-workflow args
+             {:task-queue t/task-queue
+              :search-attributes {"foo" {:type :keyword :value "child-sa"}}}))
+
+(deftest child-workflow-search-attributes-test
+  (testing "Search attributes passed to w/invoke are applied to the child workflow"
+    (let [workflow (t/create-workflow parent-search-attributes-workflow)]
+      (c/start workflow {})
+      (is (= "child-sa" (get-in @(c/get-result workflow) ["foo" :value]))))))

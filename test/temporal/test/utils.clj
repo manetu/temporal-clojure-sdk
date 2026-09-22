@@ -39,7 +39,8 @@
    (create-service {}))
 
   ([options]
-   (let [env     (e/create {:workflow-client-options options})
+   (let [env     (e/create {:workflow-client-options options
+                            :search-attributes {"foo" :keyword}})
          client  (e/get-client env)
          worker  (e/start env {:task-queue task-queue})]
      (log/trace "options:" (.getOptions client))

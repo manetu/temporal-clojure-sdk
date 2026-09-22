@@ -5,6 +5,7 @@
   (:import [io.temporal.api.enums.v1 ScheduleOverlapPolicy]
            [io.temporal.client.schedules
             Schedule
+            ScheduleUpdate
             Schedule$Builder
             ScheduleActionStartWorkflow
             ScheduleActionStartWorkflow$Builder
@@ -96,3 +97,19 @@
    (u/build (Schedule/newBuilder) schedule-spec params))
   (^Schedule [schedule params]
    (u/build (Schedule/newBuilder schedule) schedule-spec params)))
+
+(defn schedule-update->
+  "Builds a `ScheduleUpdate` from an existing `schedule` and reschedule `params`.
+
+   When `params` contains `:schedule :search-attributes`, the schedule-level
+   search attributes are updated using the two-arg `ScheduleUpdate`
+   constructor (both simple and typed input formats are accepted). The
+   supplied map replaces the entire set: existing attributes not present in
+   the map are removed, and an empty map clears them all. When the key is
+   omitted, the existing search attributes are preserved."
+  ^ScheduleUpdate [schedule params]
+  (let [updated (schedule-> schedule params)
+        sa-input (get-in params [:schedule :search-attributes])]
+    (if (some? sa-input)
+      (ScheduleUpdate. updated (sa/search-attributes-> sa-input))
+      (ScheduleUpdate. updated))))

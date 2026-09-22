@@ -1,5 +1,6 @@
 (ns ^:no-doc temporal.internal.child-workflow
   (:require [temporal.common :as common]
+            [temporal.internal.search-attributes :as sa]
             [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.api.enums.v1 ParentClosePolicy]
@@ -28,6 +29,7 @@
    :cron-schedule              #(.setCronSchedule ^ChildWorkflowOptions$Builder %1 ^String %2)
    :cancellation-type          #(.setCancellationType ^ChildWorkflowOptions$Builder %1 (cancellation-type-> %2))
    :memo                       #(.setMemo ^ChildWorkflowOptions$Builder %1 %2)
+   :search-attributes          #(.setTypedSearchAttributes ^ChildWorkflowOptions$Builder %1 (sa/search-attributes-> %2))
    :priority                   #(.setPriority ^ChildWorkflowOptions$Builder %1 (common/priority-options-> %2))
    :static-summary             #(.setStaticSummary ^ChildWorkflowOptions$Builder %1 %2)
    :static-details             #(.setStaticDetails ^ChildWorkflowOptions$Builder %1 %2)})
