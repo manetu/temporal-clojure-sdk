@@ -182,6 +182,7 @@
                    :retry-options {:maximum-attempts 1}
                    :cron-schedule "* * * * *"
                    :memo {"foo" "bar"}
+                   :search-attributes {"foo" {:type :keyword :value "child"}}
                    :workflow-id-reuse-policy :terminate-if-running
                    :parent-close-policy :terminate
                    :cancellation-type :abandon
@@ -200,6 +201,8 @@
       (is (= 1 (-> child-workflow-options .getRetryOptions .getMaximumAttempts)))
       (is (= "* * * * *"  (-> child-workflow-options .getCronSchedule)))
       (is (= {"foo" "bar"}  (-> child-workflow-options .getMemo)))
+      (is (= {"foo" {:type :keyword :value "child"}}
+             (-> child-workflow-options .getTypedSearchAttributes sa/search-attributes->map)))
       (is (= io.temporal.api.enums.v1.WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
              (-> child-workflow-options .getWorkflowIdReusePolicy)))
       (is (= io.temporal.api.enums.v1.ParentClosePolicy/PARENT_CLOSE_POLICY_TERMINATE

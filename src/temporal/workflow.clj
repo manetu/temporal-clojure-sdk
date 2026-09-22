@@ -269,6 +269,7 @@ Arguments:
 | :cron-schedule              | A cron schedule string                                                                     | String | |
 | :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
 | :memo                       | Specifies additional non-indexed information in result of list workflow                    | String | |
+| :search-attributes          | Search attributes for the child workflow. See [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). | Map | |
 | :priority                   | Priority/fairness options (see [[temporal.common/priority-options]])                       | map | |
 | :static-summary             | Single-line fixed summary shown in UI/CLI (Temporal Markdown); cannot be updated after start | String | |
 | :static-details             | Multi-line fixed details shown in UI/CLI (Temporal Markdown); cannot be updated after start  | String | |

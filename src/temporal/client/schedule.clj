@@ -4,7 +4,7 @@
             [temporal.internal.utils :as u]
             [temporal.internal.schedule :as s])
   (:import [java.time Duration]
-           [io.temporal.client.schedules ScheduleClient ScheduleUpdate ScheduleUpdateInput]))
+           [io.temporal.client.schedules ScheduleClient ScheduleUpdateInput]))
 
 (defn create-client
   "Creates a `ScheduleClient` instance suitable for interacting with Temporal's Schedules.
@@ -174,18 +174,27 @@
       (.trigger (s/overlap-policy-> overlap-policy))))
 
 (defn reschedule
-  "Updates the current Temporal `Schedule` via a schedule-id.
-   Uses the same options as [[schedule]] except `:schedule`.
+  "Updates a Temporal schedule by `schedule-id`.
 
-   The `ScheduleHandle` takes a unary function object
-   of the signature:
+  Arguments:
 
-   (ScheduleUpdateInput) -> ScheduleUpdate
+  - `client`: [ScheduleClient](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleClient.html)
+  - `schedule-id`: The string name of the schedule in Temporal
+  - `options`: A map of schedule option sections (see [[schedule]])
+
+   Supplied top-level sections (`:spec`, `:policy`, `:state`, `:action`) and
+   `:schedule :search-attributes` replace existing values without deep-merging
+   (passing an empty map clears all search attributes).
+   Omitted sections remain unchanged.
+
+   Note: `:search-attributes` is the only `:schedule` key applied on update;
+   all other keys are create-time only and will be ignored.
+
+   See [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats).
 
    ```clojure
-
    (let [client (create-client {:target \"localhost:7233\"})]
-      (reschedule client \"my-schedule\" {:spec {:cron-expressions [\"1 * * * *\"]}})
+     (reschedule client \"my-schedule\" {:spec {:cron-expressions [\"1 * * * *\"]}}))
    ```"
   [^ScheduleClient client schedule-id options]
   (log/tracef "update schedule:" schedule-id)
@@ -194,9 +203,7 @@
             (let [schedule (-> input
                                (.getDescription)
                                (.getSchedule))]
-              (-> schedule
-                  (s/schedule-> opts)
-                  (ScheduleUpdate.))))]
+              (s/schedule-update-> schedule opts)))]
     (-> client
         (.getHandle schedule-id)
         (.update (u/->Func (partial update-fn options))))))
