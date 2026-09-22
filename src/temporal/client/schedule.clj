@@ -29,6 +29,52 @@
    - `schedule-id`: The string name of the schedule in Temporal, keeping it consistent with workflow id is a good idea
    - `options`: A map containing the `:schedule`, `:state`, `:policy`, `:spec`, and `:action` option maps for the `Schedule`
 
+   `:schedule` options:
+
+   | Value                   | Description                                                 | Type    |
+   |-------------------------|-------------------------------------------------------------|---------|
+   | :trigger-immediately?   | Trigger one action immediately when the schedule is created | boolean |
+   | :memo                   | Arbitrary non-indexed metadata map                          | Map     |
+   | :search-attributes      | Indexed schedule-level attributes. Supports simple and typed formats; see [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). | Map |
+
+   `:state` options:
+
+   | Value               | Description                                                | Type    |
+   |---------------------|------------------------------------------------------------|---------|
+   | :paused?            | Whether the schedule starts paused                         | boolean |
+   | :note               | Human-readable note describing the current state           | String  |
+   | :limited-action?    | Limit the schedule to `:remaining-actions` executions      | boolean |
+   | :remaining-actions  | Number of actions remaining when `:limited-action?` is set | long |
+
+   `:policy` options:
+
+   | Value               | Description                                          | Type |
+   |---------------------|------------------------------------------------------|------|
+   | :overlap            | Overlap policy: `:allow`, `:buffer`, `:buffer-one`, `:cancel`, `:skip`, `:terminate` | keyword |
+   | :catchup-window     | Maximum catch-up window for missed actions           | [Duration](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/Duration.html) |
+   | :pause-on-failure?  | Pause the schedule if a workflow action fails        | boolean |
+
+   `:spec` options:
+
+   | Value              | Description                                           | Type |
+   |--------------------|-------------------------------------------------------|------|
+   | :cron-expressions  | Cron expressions in [Temporal cron syntax](https://docs.temporal.io/cron-job)   | List of String |
+   | :calendars         | Calendar specs                                        | List of [ScheduleCalendarSpec](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleCalendarSpec.html) |
+   | :intervals         | Interval specs                                        | List of [ScheduleIntervalSpec](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleIntervalSpec.html) |
+   | :start-at          | Time before which no actions are taken                | [Instant](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/Instant.html) |
+   | :end-at            | Time after which no actions are taken                 | [Instant](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/Instant.html) |
+   | :jitter            | Random jitter applied to each action time             | [Duration](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/Duration.html) |
+   | :skip-at           | Calendar specs to skip                                | List of [ScheduleCalendarSpec](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleCalendarSpec.html) |
+   | :timezone          | IANA timezone name (e.g. `US/Central`, `UTC`); one of [`ZoneId/getAvailableZoneIds`](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/time/ZoneId.html#getAvailableZoneIds()) | String |
+
+   `:action` options:
+
+   | Value          | Description                                                         | Type |
+   |----------------|---------------------------------------------------------------------|------|
+   | :workflow-type | The workflow to start                                               | A [[temporal.workflow/defworkflow]] reference or its String name |
+   | :arguments     | Arguments passed to the started workflow                            | Serializable value |
+   | :options       | Workflow options for each started run                               | See [[temporal.client.core/create-workflow]] |
+
    `:search-attributes` is supported in both `:schedule` and `:action :options`.
    Both simple and typed formats are accepted; see [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats).
 
