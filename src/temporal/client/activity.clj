@@ -1,7 +1,8 @@
 ;; Copyright © Manetu, Inc.  All rights reserved
 
 (ns temporal.client.activity
-  "Methods for dispatching Standalone Activities via `ActivityClient` (Temporal Java SDK 1.36+).
+  "Methods for dispatching Standalone Activities via `ActivityClient` (Temporal Java SDK 1.36+;
+  generally available, no longer `@Experimental`, as of Temporal Java SDK 1.39).
 
   Standalone Activities run independently of any workflow.  This namespace is the *external
   client* API — use it from application code, tests, or scripts outside a workflow context.
@@ -80,7 +81,7 @@
   | :heartbeat-timeout         | Maximum time between heartbeats                                               | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
   | :retry-options             | Retry configuration                                                           | [[temporal.common/retry-options]] |           |
   | :start-delay               | Delay before the activity is scheduled                                        | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
-  | :static-summary            | Short summary visible in the Temporal UI                                      | String                            |           |
+  | :static-summary            | Short summary visible in the Temporal UI (maps to `setSummary` since SDK 1.39) | String                            |           |
   | :static-details            | Longer details visible in the Temporal UI                                     | String                            |           |
 
   #### id reuse policies

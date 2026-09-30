@@ -28,7 +28,7 @@
    :heartbeat-timeout         #(.setHeartbeatTimeout ^StartActivityOptions$Builder %1 %2)
    :retry-options             #(.setRetryOptions ^StartActivityOptions$Builder %1 (common/retry-options-> %2))
    :start-delay               #(.setStartDelay ^StartActivityOptions$Builder %1 %2)
-   :static-summary            #(.setStaticSummary ^StartActivityOptions$Builder %1 %2)
+   :static-summary            #(.setSummary ^StartActivityOptions$Builder %1 %2)
    :static-details            #(.setStaticDetails ^StartActivityOptions$Builder %1 %2)})
 
 (defn- import-start-options

@@ -14,7 +14,7 @@
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/core.async "1.7.701"]
                  [org.clojure/tools.analyzer.jvm "1.3.3"]
-                 [io.temporal/temporal-shaded "1.38.0"]
+                 [io.temporal/temporal-shaded "1.40.0"]
                  [com.jayway.jsonpath/json-path "2.9.0"]
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
@@ -35,7 +35,7 @@
                                     [criterium "0.4.6"]
                                     [eftest "0.6.0"]
                                     [mockery "0.1.4"]
-                                    [io.temporal/temporal-opentracing "1.38.0"]
+                                    [io.temporal/temporal-opentracing "1.40.0"]
                                     [io.opentracing/opentracing-mock "0.33.0"]
                                     [same/ish "0.1.7"]]
                    :resource-paths ["test/temporal/test/resources"]}}

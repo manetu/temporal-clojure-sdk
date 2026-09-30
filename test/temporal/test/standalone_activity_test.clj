@@ -183,7 +183,7 @@
   (testing ":static-summary is set in StartActivityOptions"
     (let [^StartActivityOptions opts (ac/start-activity-options-> {:task-queue     "q"
                                                                    :static-summary "my summary"})]
-      (is (= "my summary" (.getStaticSummary opts))))))
+      (is (= "my summary" (.getSummary opts))))))
 
 (deftest test-options-static-details
   (testing ":static-details is set in StartActivityOptions"
