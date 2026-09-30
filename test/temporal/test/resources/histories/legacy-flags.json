@@ -1,0 +1,191 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": "2026-09-30T14:44:46.193Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "legacy-flags-workflow"
+        },
+        "taskQueue": {
+          "name": "temporal.test.utils/default"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L3BsYWlu"
+              },
+              "data": "TlBZABM\u003d"
+            }
+          ]
+        },
+        "workflowExecutionTimeout": "315360000s",
+        "workflowRunTimeout": "315360000s",
+        "workflowTaskTimeout": "10s",
+        "originalExecutionRunId": "6c2f7a3f-efde-47e1-9e28-3f4e31005446",
+        "identity": "19324@Mac.berg.mordain.com",
+        "firstExecutionRunId": "6c2f7a3f-efde-47e1-9e28-3f4e31005446",
+        "attempt": 1,
+        "firstWorkflowTaskBackoff": "0s",
+        "header": {}
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": "2026-09-30T14:44:46.193Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "temporal.test.utils/default"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": "2026-09-30T14:44:46.199Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "19324@Mac.berg.mordain.com",
+        "historySizeBytes": "303"
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": "2026-09-30T14:44:46.245Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "19324@Mac.berg.mordain.com",
+        "sdkMetadata": {
+          "langUsedFlags": [
+            1,
+            2,
+            3
+          ],
+          "sdkName": "temporal-java",
+          "sdkVersion": "1.38.0"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": "2026-09-30T14:44:46.245Z",
+      "eventType": "EVENT_TYPE_MARKER_RECORDED",
+      "markerRecordedEventAttributes": {
+        "markerName": "Version",
+        "details": {
+          "changeId": {
+            "payloads": [
+              {
+                "metadata": {
+                  "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+                },
+                "data": "InRlbXBvcmFsLnRlc3QubGVnYWN5LWZsYWdzLXRlc3QvbGVnYWN5Ig\u003d\u003d"
+              }
+            ]
+          },
+          "version": {
+            "payloads": [
+              {
+                "metadata": {
+                  "encoding": "anNvbi9wbGFpbg\u003d\u003d"
+                },
+                "data": "MQ\u003d\u003d"
+              }
+            ]
+          }
+        },
+        "workflowTaskCompletedEventId": "3"
+      }
+    },
+    {
+      "eventId": "6",
+      "eventTime": "2026-09-30T14:44:46.245Z",
+      "eventType": "EVENT_TYPE_TIMER_STARTED",
+      "timerStartedEventAttributes": {
+        "timerId": "1938e2b2-9f5e-3bf2-9cbd-5b9cf4ef0a9c",
+        "startToFireTimeout": "300s",
+        "workflowTaskCompletedEventId": "3"
+      }
+    },
+    {
+      "eventId": "7",
+      "eventTime": "2026-09-30T14:44:46.245Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
+      "workflowExecutionSignaledEventAttributes": {
+        "signalName": "temporal.test.legacy-flags-test/poke",
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L3BsYWlu"
+              },
+              "data": "TlBZABM\u003d"
+            }
+          ]
+        },
+        "identity": "19324@Mac.berg.mordain.com"
+      }
+    },
+    {
+      "eventId": "8",
+      "eventTime": "2026-09-30T14:44:46.245Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "temporal.test.utils/default"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 2
+      }
+    },
+    {
+      "eventId": "9",
+      "eventTime": "2026-09-30T14:44:46.246Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "8",
+        "identity": "19324@Mac.berg.mordain.com",
+        "historySizeBytes": "836"
+      }
+    },
+    {
+      "eventId": "10",
+      "eventTime": "2026-09-30T14:44:46.259Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "8",
+        "identity": "19324@Mac.berg.mordain.com",
+        "sdkMetadata": {
+          "sdkName": "temporal-java",
+          "sdkVersion": "1.38.0"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "11",
+      "eventTime": "2026-09-30T14:44:46.259Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "YmluYXJ5L3BsYWlu"
+              },
+              "data": "TlBZAHACagd2ZXJzaW9uKgAAAAFqCnNhdGlzZmllZD8I"
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": "9"
+      }
+    }
+  ]
+}

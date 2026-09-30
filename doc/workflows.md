@@ -171,6 +171,8 @@ Doing so ensures that you meet the origination rules regardless of the condition
 
 You may use [temporal.workflow/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
 
+> **Temporal Java SDK 1.40:** The SDK flags `CANCEL_AWAIT_TIMER_ON_CONDITION` and `VERSION_WAIT_FOR_MARKER` are now enabled by default.  The former cancels the timer backing a timed `await` once its condition is satisfied; the latter affects how `get-version` waits for its marker during replay.  Histories recorded by earlier SDK versions continue to replay correctly, and no code changes are required.  See [Replay Testing](replay_testing.md) to verify your own workflows.
+
 ### Temporal Signals
 
 Your Workflow may send or receive [signals](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals).
