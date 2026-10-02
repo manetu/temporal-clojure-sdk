@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### promesa 11.0.678 → 12.0.1
+
+Bumped `funcool/promesa` to 12.0.1.
+
+**Breaking change handled**
+
+- promesa 12 routes `p/join`, `p/await` and `p/await!` through the new `IJoinable` protocol instead of `IAwaitable`.  `PromiseAdapter` is also a `CompletionStage`, so it was dispatching to promesa's built-in `CompletionStage` impl, which fails on `.toCompletableFuture`.  `PromiseAdapter` now implements `IJoinable` directly (and `IAwaitable` delegates to it).
+
+**Deprecations (no action required)**
+
+- Upstream deprecated `p/await!` (use `p/join` or `p/await`) and the `!`-suffixed `run!`, `cancel!`, `resolve!`, `reject!` and `do!` in favor of `p/run`, `p/cancel`, `p/resolve`, `p/reject` and `p/do`.  The old names remain as aliases.
+
 ### Temporal Java SDK 1.38.0 → 1.40.0
 
 Bumped `io.temporal/temporal-shaded` and `temporal-opentracing` to 1.40.0.

@@ -54,7 +54,7 @@
   (let [pr             (invoke args)
         pending-before (p/pending? pr)
         printable?     (try (some? (pr-str pr)) (catch Throwable _ false))
-        value          (try (p/await! pr) (catch Throwable _ :threw))]
+        value          (try (p/join pr) (catch Throwable _ :threw))]
     {:pending-before pending-before
      :printable?     printable?
      :value          value
@@ -97,7 +97,7 @@
     (is (false? (:pending-after r)))))
 
 (deftest introspect-test
-  (testing "Verifies that p/pending?, p/resolved?, p/rejected?, p/await!, and printing work on resolved and rejected promises"
+  (testing "Verifies that p/pending?, p/resolved?, p/rejected?, p/join, and printing work on resolved and rejected promises"
     (verify-introspect {:name "Bob"}
                        {:value "Hi, Bob" :resolved? true :rejected? false})
     (verify-introspect {:name "Bob" :throw? true}
