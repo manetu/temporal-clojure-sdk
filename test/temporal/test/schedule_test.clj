@@ -27,6 +27,8 @@
       (swap! state update :pause (fnil inc 0)))
     (unpause [_]
       (swap! state update :unpause (fnil inc 0)))
+    (backfill [_ backfills]
+      (swap! state update :backfill assoc :backfills backfills))
     (trigger [_ overlap-policy]
       (swap! state update :trigger assoc :overlap-policy overlap-policy))))
 
@@ -66,6 +68,9 @@
                   :limited-action? false}
                  state)
    :schedule (merge {:trigger-immediately? true
+                     :backfills [{:start-at (Instant/parse "2024-01-01T00:00:00Z")
+                                  :end-at (Instant/parse "2024-01-01T01:00:00Z")
+                                  :overlap :buffer-one}]
                      :memo {"note" "memo"}
                      :search-attributes {"foo" {:type :keyword :value "schedule"}}}
                     schedule)})
@@ -78,28 +83,35 @@
     (let [state (atom {})
           client (create-mocked-schedule-client state)]
       (is (some? (schedule/schedule client schedule-id (stub-schedule-options))))
-      (is (= (get-in @state [:create :schedule-id]) schedule-id))
-      (is (= (-> (get-in @state [:create :schedule]) .getAction .getWorkflowType) (w/get-annotated-name simple-workflow)))
-      (is (= (-> (get-in @state [:create :schedule]) .getAction .getWorkflowType) "simple-workflow"))
-      (is (= (-> (get-in @state [:create :schedule]) .getAction .getOptions .getWorkflowId) workflow-id))
-      (is (= (-> (get-in @state [:create :schedule])
-                 .getAction
-                 .getOptions
-                 .getTypedSearchAttributes
-                 sa/search-attributes->map
-                 (get "foo")
-                 :value)
-             "workflow"))
-      (is (= (-> (get-in @state [:create :schedule]) .getSpec .getCronExpressions) ["0 * * * * "]))
-      (is (-> (get-in @state [:create :schedule]) .getPolicy .isPauseOnFailure))
-      (is (= (-> (get-in @state [:create :schedule]) .getState .getNote) "note"))
-      (is (-> (get-in @state [:create :schedule]) .getState .isPaused))
-      (is (= (-> (get-in @state [:create :schedule-options])
-                 .getTypedSearchAttributes
-                 sa/search-attributes->map
-                 (get "foo")
-                 :value)
-             "schedule")))))
+      (let [schedule (get-in @state [:create :schedule])
+            schedule-options (get-in @state [:create :schedule-options])
+            ^io.temporal.client.schedules.ScheduleBackfill backfill (first (.getBackfills schedule-options))]
+        (is (= (get-in @state [:create :schedule-id]) schedule-id))
+        (is (= (-> schedule .getAction .getWorkflowType) (w/get-annotated-name simple-workflow)))
+        (is (= (-> schedule .getAction .getWorkflowType) "simple-workflow"))
+        (is (= (-> schedule .getAction .getOptions .getWorkflowId) workflow-id))
+        (is (= (-> schedule
+                   .getAction
+                   .getOptions
+                   .getTypedSearchAttributes
+                   sa/search-attributes->map
+                   (get "foo")
+                   :value)
+               "workflow"))
+        (is (= (-> schedule .getSpec .getCronExpressions) ["0 * * * * "]))
+        (is (-> schedule .getPolicy .isPauseOnFailure))
+        (is (= (-> schedule .getState .getNote) "note"))
+        (is (-> schedule .getState .isPaused))
+        (is (= (count (.getBackfills schedule-options)) 1))
+        (is (= (.getStartAt backfill) (Instant/parse "2024-01-01T00:00:00Z")))
+        (is (= (.getEndAt backfill) (Instant/parse "2024-01-01T01:00:00Z")))
+        (is (= (.getOverlapPolicy backfill) (s/overlap-policy-> :buffer-one)))
+        (is (= (-> schedule-options
+                   .getTypedSearchAttributes
+                   sa/search-attributes->map
+                   (get "foo")
+                   :value)
+               "schedule"))))))
 
 (deftest unschedule-scheduled-workflow-test
   (testing "unscheduling a scheduled workflow is successful"
@@ -128,6 +140,20 @@
           client (create-mocked-schedule-client state)]
       (schedule/unpause client schedule-id)
       (is (= (:unpause @state) 1)))))
+
+(deftest backfill-scheduled-workflow-test
+  (testing "backfills a scheduled workflow successfully"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)
+          backfills [{:start-at (Instant/parse "2024-01-03T00:00:00Z")
+                      :end-at (Instant/parse "2024-01-04T00:00:00Z")
+                      :overlap :buffer}]]
+      (schedule/backfill client schedule-id backfills)
+      (let [^io.temporal.client.schedules.ScheduleBackfill backfill (first (get-in @state [:backfill :backfills]))]
+        (is (= 1 (count (get-in @state [:backfill :backfills]))))
+        (is (= (.getStartAt backfill) (Instant/parse "2024-01-03T00:00:00Z")))
+        (is (= (.getEndAt backfill) (Instant/parse "2024-01-04T00:00:00Z")))
+        (is (= (.getOverlapPolicy backfill) (s/overlap-policy-> :buffer)))))))
 
 (deftest execute-scheduled-workflow-test
   (testing "executes a scheduled workflow is successful"
