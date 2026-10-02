@@ -11,6 +11,7 @@
             [temporal.internal.search-attributes :as sa]
             [temporal.internal.workflow :as w])
   (:import [java.time Duration Instant]
+           [io.temporal.client.schedules ScheduleBackfill]
            [io.temporal.shaded.io.grpc Grpc InsecureChannelCredentials Metadata]
            [io.temporal.shaded.io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
 
@@ -143,10 +144,17 @@
           state {:paused? true
                  :note "note"
                  :limited-action? false}
-          schedule-options-typed {:memo {"source" "types-test"}
+          typed-backfill {:start-at (Instant/parse "2024-01-01T00:00:00Z")
+                          :end-at (Instant/parse "2024-01-01T01:00:00Z")
+                          :overlap :buffer-one}
+          simple-backfill {:start-at (Instant/parse "2024-01-02T00:00:00Z")
+                           :end-at (Instant/parse "2024-01-02T01:00:00Z")}
+          schedule-options-typed {:backfills [typed-backfill]
+                                  :memo {"source" "types-test"}
                                   :search-attributes {"foo" {:type :keyword :value "bar"}}
                                   :trigger-immediately? true}
-          schedule-options-simple {:memo {"source" "types-test"}
+          schedule-options-simple {:backfills [simple-backfill]
+                                   :memo {"source" "types-test"}
                                    :search-attributes {"foo" "bar"}
                                    :trigger-immediately? true}
           schedule (s/schedule-> {:action action
@@ -154,7 +162,9 @@
                                   :spec spec
                                   :state state})
           built-schedule-options-typed (s/schedule-options-> schedule-options-typed)
-          built-schedule-options-simple (s/schedule-options-> schedule-options-simple)]
+          built-schedule-options-simple (s/schedule-options-> schedule-options-simple)
+          ^ScheduleBackfill built-typed-backfill (first (.getBackfills built-schedule-options-typed))
+          ^ScheduleBackfill built-simple-backfill (first (.getBackfills built-schedule-options-simple))]
       (is (some? (s/schedule-action-start-workflow-> action)))
       (is (some? (s/schedule-spec-> spec)))
       (is (some? (s/schedule-policy-> policy)))
@@ -167,6 +177,11 @@
       (is (= "note" (-> schedule .getState .getNote)))
       (is (-> schedule .getState .isPaused))
       (is (= "types-test" (-> built-schedule-options-typed .getMemo (get "source"))))
+      (is (= (.getStartAt built-typed-backfill) (Instant/parse "2024-01-01T00:00:00Z")))
+      (is (= (.getEndAt built-typed-backfill) (Instant/parse "2024-01-01T01:00:00Z")))
+      (is (= (.getOverlapPolicy built-typed-backfill) (s/overlap-policy-> :buffer-one)))
+      (is (= (.getStartAt built-simple-backfill) (Instant/parse "2024-01-02T00:00:00Z")))
+      (is (= (.getEndAt built-simple-backfill) (Instant/parse "2024-01-02T01:00:00Z")))
       (is (= {"foo" {:type :keyword :value "bar"}}
              (-> built-schedule-options-typed .getTypedSearchAttributes sa/search-attributes->map)))
       (is (= {"foo" {:type :text :value "bar"}}

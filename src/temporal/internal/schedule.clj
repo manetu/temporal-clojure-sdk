@@ -5,6 +5,7 @@
   (:import [io.temporal.api.enums.v1 ScheduleOverlapPolicy]
            [io.temporal.client.schedules
             Schedule
+            ScheduleBackfill
             ScheduleUpdate
             Schedule$Builder
             ScheduleActionStartWorkflow
@@ -77,8 +78,19 @@
   ^ScheduleState [params]
   (u/build (ScheduleState/newBuilder) schedule-state-spec params))
 
+(defn schedule-backfill->
+  ^ScheduleBackfill [params]
+  (if-let [overlap (:overlap params)]
+    (ScheduleBackfill. (:start-at params) (:end-at params) (overlap-policy-> overlap))
+    (ScheduleBackfill. (:start-at params) (:end-at params))))
+
+(defn schedule-backfills->
+  [backfills]
+  (mapv schedule-backfill-> backfills))
+
 (def schedule-options-spec
-  {:memo                  #(.setMemo ^ScheduleOptions$Builder %1 %2)
+  {:backfills             #(.setBackfills ^ScheduleOptions$Builder %1 (schedule-backfills-> %2))
+   :memo                  #(.setMemo ^ScheduleOptions$Builder %1 %2)
    :search-attributes     #(.setTypedSearchAttributes ^ScheduleOptions$Builder %1 (sa/search-attributes-> %2))
    :trigger-immediately?  #(.setTriggerImmediately ^ScheduleOptions$Builder %1 %2)})
 

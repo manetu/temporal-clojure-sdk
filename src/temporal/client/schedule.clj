@@ -34,6 +34,7 @@
    | Value                   | Description                                                 | Type    |
    |-------------------------|-------------------------------------------------------------|---------|
    | :trigger-immediately?   | Trigger one action immediately when the schedule is created | boolean |
+   | :backfills              | Backfill windows to execute immediately after create. Each entry is a map with `:start-at`, `:end-at`, and optional `:overlap` (`:allow` to run them in parallel or `:buffer` to run them sequentially). Backfills run missed Actions for a past time range now. | List |
    | :memo                   | Arbitrary non-indexed metadata map                          | Map     |
    | :search-attributes      | Indexed schedule-level attributes. Supports simple and typed formats; see [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). | Map |
 
@@ -158,6 +159,31 @@
   (-> client
       (.getHandle schedule-id)
       (.unpause)))
+
+(defn backfill
+  "Backfills an existing Temporal `Schedule` via a schedule-id.
+
+   Arguments:
+
+   - `client`: [ScheduleClient](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/client/schedules/ScheduleClient.html)
+   - `schedule-id`: The string name of the schedule in Temporal
+   - `backfills`: A collection of maps with `:start-at`, `:end-at`, and optional
+     `:overlap`. Backfills run missed Actions for a past time range now. Use
+     `:allow` to run them in parallel or `:buffer` to run them sequentially.
+
+   ```clojure
+   (let [client (create-client {:target \"localhost:7233\"})]
+     (backfill client
+               \"my-schedule\"
+               [{:start-at (Instant/parse \"2024-01-01T00:00:00Z\")
+                 :end-at (Instant/parse \"2024-01-02T00:00:00Z\")
+                 :overlap :buffer}]))
+   ```"
+  [^ScheduleClient client schedule-id backfills]
+  (log/tracef "backfill schedule:" schedule-id)
+  (-> client
+      (.getHandle schedule-id)
+      (.backfill (s/schedule-backfills-> backfills))))
 
 (defn execute
   "Runs a Temporal Schedule workflow execution immediately via a schedule-id
