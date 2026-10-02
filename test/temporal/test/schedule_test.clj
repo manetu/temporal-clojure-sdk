@@ -25,10 +25,16 @@
       nil)
     (pause [_]
       (swap! state update :pause (fnil inc 0)))
+    (pause [_ note]
+      (swap! state update :pause assoc :note note))
     (unpause [_]
       (swap! state update :unpause (fnil inc 0)))
+    (unpause [_ note]
+      (swap! state update :unpause assoc :note note))
     (backfill [_ backfills]
       (swap! state update :backfill assoc :backfills backfills))
+    (trigger [_]
+      (swap! state update :trigger (fnil inc 0)))
     (trigger [_ overlap-policy]
       (swap! state update :trigger assoc :overlap-policy overlap-policy))))
 
@@ -141,6 +147,20 @@
       (schedule/unpause client schedule-id)
       (is (= (:unpause @state) 1)))))
 
+(deftest pause-scheduled-workflow-with-note-test
+  (testing "pauses a scheduled workflow with a note"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)]
+      (schedule/pause client schedule-id "paused for maintenance")
+      (is (= (get-in @state [:pause :note]) "paused for maintenance")))))
+
+(deftest unpause-scheduled-workflow-with-note-test
+  (testing "unpauses a scheduled workflow with a note"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)]
+      (schedule/unpause client schedule-id "maintenance complete")
+      (is (= (get-in @state [:unpause :note]) "maintenance complete")))))
+
 (deftest backfill-scheduled-workflow-test
   (testing "backfills a scheduled workflow successfully"
     (let [state (atom {})
@@ -162,6 +182,13 @@
       (schedule/execute client schedule-id :skip)
       (is (= (get-in @state [:trigger :overlap-policy])
              (s/overlap-policy-> :skip))))))
+
+(deftest execute-scheduled-workflow-with-default-overlap-test
+  (testing "executes a scheduled workflow with the Java SDK default overlap behavior"
+    (let [state (atom {})
+          client (create-mocked-schedule-client state)]
+      (schedule/execute client schedule-id)
+      (is (= (:trigger @state) 1)))))
 
 (deftest reschedule-scheduled-workflow-test
   (testing "reschedules/updates a scheduled workflow is successful"

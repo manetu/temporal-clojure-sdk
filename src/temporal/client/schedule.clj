@@ -133,32 +133,42 @@
       (.describe)))
 
 (defn pause
-  "Pauses an existing Temporal `Schedule` via a schedule-id
+  "Pauses an existing Temporal `Schedule` via a schedule-id.
+
+   Optionally accepts a human-readable note explaining the pause.
 
    ```clojure
-
    (let [client (create-client {:target \"localhost:7233\"})]
-      (pause client \"my-schedule\")
-    ```"
-  [^ScheduleClient client schedule-id]
-  (log/tracef "pausing schedule:" schedule-id)
-  (-> client
-      (.getHandle schedule-id)
-      (.pause)))
+     (pause client \"my-schedule\")
+     (pause client \"my-schedule\" \"paused for maintenance\"))
+   ```"
+  ([^ScheduleClient client schedule-id]
+   (pause client schedule-id nil))
+  ([^ScheduleClient client schedule-id note]
+   (log/tracef "pausing schedule:" schedule-id)
+   (let [handle (.getHandle client schedule-id)]
+     (if note
+       (.pause handle note)
+       (.pause handle)))))
 
 (defn unpause
-  "Unpauses an existing Temporal `Schedule` via a schedule-id
+  "Unpauses an existing Temporal `Schedule` via a schedule-id.
+
+   Optionally accepts a human-readable note explaining the resume.
 
    ```clojure
-
    (let [client (create-client {:target \"localhost:7233\"})]
-      (unpause client \"my-schedule\")
-    ```"
-  [^ScheduleClient client schedule-id]
-  (log/tracef "unpausing schedule:" schedule-id)
-  (-> client
-      (.getHandle schedule-id)
-      (.unpause)))
+     (unpause client \"my-schedule\")
+     (unpause client \"my-schedule\" \"maintenance complete\"))
+   ```"
+  ([^ScheduleClient client schedule-id]
+   (unpause client schedule-id nil))
+  ([^ScheduleClient client schedule-id note]
+   (log/tracef "unpausing schedule:" schedule-id)
+   (let [handle (.getHandle client schedule-id)]
+     (if note
+       (.unpause handle note)
+       (.unpause handle)))))
 
 (defn backfill
   "Backfills an existing Temporal `Schedule` via a schedule-id.
@@ -186,18 +196,23 @@
       (.backfill (s/schedule-backfills-> backfills))))
 
 (defn execute
-  "Runs a Temporal Schedule workflow execution immediately via a schedule-id
+  "Runs a Temporal Schedule workflow execution immediately via a schedule-id.
+
+   Optionally accepts an overlap policy.
 
    ```clojure
-
    (let [client (create-client {:target \"localhost:7233\"})]
-      (execute client \"my-schedule\" :skip)
-    ```"
-  [^ScheduleClient client schedule-id overlap-policy]
-  (log/tracef "execute schedule:" schedule-id)
-  (-> client
-      (.getHandle schedule-id)
-      (.trigger (s/overlap-policy-> overlap-policy))))
+     (execute client \"my-schedule\")
+     (execute client \"my-schedule\" :skip))
+   ```"
+  ([^ScheduleClient client schedule-id]
+   (execute client schedule-id nil))
+  ([^ScheduleClient client schedule-id overlap-policy]
+   (log/tracef "execute schedule:" schedule-id)
+   (let [handle (.getHandle client schedule-id)]
+     (if overlap-policy
+       (.trigger handle (s/overlap-policy-> overlap-policy))
+       (.trigger handle)))))
 
 (defn reschedule
   "Updates a Temporal schedule by `schedule-id`.
