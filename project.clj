@@ -19,7 +19,7 @@
                  [com.taoensso/encore "3.139.0"]
                  [com.taoensso/timbre "6.6.1"]
                  [com.taoensso/nippy "3.4.2"]
-                 [funcool/promesa "11.0.678"]
+                 [funcool/promesa "12.0.1"]
                  [metosin/jsonista "1.0.1"]
                  [medley "1.4.0"]
                  [org.clj-commons/slingshot "0.13.0"]]
