@@ -6,7 +6,7 @@
    [temporal.converter.payload :refer [->payload]])
   (:import
    [io.temporal.api.common.v1 Payload]
-   [io.temporal.common.converter PayloadConverter]
+   [io.temporal.common.converter DataConverterException PayloadConverter]
    [java.lang.reflect Type]))
 
 (def ^String binary-plain
@@ -21,7 +21,12 @@
     binary-plain)
 
   (toData [_ value]
-    (-> value (nippy/freeze) (->payload metadata) (->optional)))
+    (try
+      (-> value (nippy/freeze) (->payload metadata) (->optional))
+      (catch Exception e
+        (throw
+         (DataConverterException.
+          (str "Nippy serialization failed => " (ex-message e)))))))
 
   (fromData [_ ^Payload content ^Class _value-class ^Type _value-type]
     (-> content (.getData) (.toByteArray) (nippy/thaw))))
