@@ -12,6 +12,7 @@
 (deftest metadata?
   (are [input] (is (sut/metadata? input))
     {}
+    sut/empty
     {"custom" (->byte-string "data")})
 
   (are [input] (is (not (sut/metadata? input)))

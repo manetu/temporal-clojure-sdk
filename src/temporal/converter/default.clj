@@ -1,16 +1,24 @@
 (ns temporal.converter.default
   (:require
    [clojure.stacktrace :as stacktrace]
+   [temporal.converter.encoding :as encoding]
    [temporal.converter.json :as json]
    [temporal.converter.nippy :as nippy])
   (:import
    [io.temporal.api.failure.v1 ApplicationFailureInfo Failure]
-   [io.temporal.common.converter DataConverterException DefaultDataConverter NullPayloadConverter PayloadConverter]
-   [io.temporal.common.converter DataConverter FailureConverter]
-   [io.temporal.failure DefaultFailureConverter]
+   [io.temporal.common.converter
+    DataConverter
+    DataConverterException
+    DefaultDataConverter
+    FailureConverter
+    NullPayloadConverter
+    PayloadAndFailureDataConverter
+    PayloadConverter]
    [io.temporal.failure DefaultFailureConverter]
    [io.temporal.payload.context SerializationContext]
-   [java.lang RuntimeException]))
+   [java.lang RuntimeException]
+   [java.lang.reflect Field]
+   [java.util Map]))
 
 (def standard-converters
   [(NullPayloadConverter.)
@@ -50,10 +58,61 @@
       (^FailureConverter withContext [_ ^SerializationContext _context]
         (create-failure)))))
 
+(defn get-field ^Field [field]
+  (doto (.getDeclaredField PayloadAndFailureDataConverter field)
+    (.setAccessible true)))
+
+(def ^Field converters-field (get-field "converters"))
+
+(def ^Field converters-map-field (get-field "convertersMap"))
+
+(def ^Field failure-converter-field (get-field "failureConverter"))
+
+(def ^Field serialization-context-field (get-field "serializationContext"))
+
+(defn get-converter [^PayloadAndFailureDataConverter data-converter encoding]
+  (let [converters-map (.get converters-map-field data-converter)
+        converter (.get ^Map converters-map encoding)]
+    (when converter
+      (if-let [serialization-context (.get serialization-context-field data-converter)]
+        (.withContext ^PayloadConverter converter serialization-context)
+        converter))))
+
+(defn encoded->payload
+  "This is a custom re-implementation of the PayloadAndFailureDataConverter/toPayload"
+  [^PayloadAndFailureDataConverter data-converter {:keys [value encoding]}]
+  (if-let [converter (get-converter data-converter encoding)]
+    (let [result (.toData ^PayloadConverter converter value)]
+      (if (.isPresent result)
+        result
+        (throw (DataConverterException.
+                (str "Cannot encode value with the selected converter: " value)))))
+    (throw (DataConverterException.
+            (str "No PayloadConverter is registered for this encoding: " encoding)))))
+
 (defn create
   (^DefaultDataConverter []
    (create standard-converters))
 
+  (^DefaultDataConverter [converters source-data-converter]
+   (let [data-converter (create converters)]
+     (doseq [^Field field [converters-field converters-map-field failure-converter-field]]
+       (->> (.get field source-data-converter)
+            (.set field data-converter)))
+     data-converter))
+
   (^DefaultDataConverter [converters]
-   (doto (DefaultDataConverter. (into-array PayloadConverter converters))
-     (.withFailureConverter (create-failure)))))
+   (let [^DefaultDataConverter data-converter
+         (proxy [DefaultDataConverter] [(into-array PayloadConverter converters)]
+           (withContext [context]
+             (let [data-converter (create converters this)]
+               (.set serialization-context-field data-converter context)
+               data-converter))
+
+           (toPayload [value]
+             (let [^PayloadAndFailureDataConverter this this]
+               (if (encoding/tagged? value)
+                 (encoded->payload this value)
+                 (proxy-super toPayload value)))))]
+     (doto data-converter
+       (.withFailureConverter (create-failure))))))

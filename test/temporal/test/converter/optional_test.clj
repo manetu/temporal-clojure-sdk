@@ -1,8 +1,10 @@
 (ns temporal.test.converter.optional-test
-  (:require [clojure.template :refer [do-template]]
-            [clojure.test :refer [are deftest is testing]]
-            [temporal.converter.optional :as sut])
-  (:import [java.util Optional]))
+  (:require
+   [clojure.template :refer [do-template]]
+   [clojure.test :refer [deftest is testing]]
+   [temporal.converter.optional :as sut])
+  (:import
+   [java.util Optional]))
 
 (deftest ->optional-with-present-values
   (do-template
