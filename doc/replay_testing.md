@@ -196,6 +196,10 @@ Replay testing and workflow versioning work together. Whenever you make a code c
 
 See the [Versioning section in the Workflows guide](workflows.md#versioning) for the full pattern and the upstream [Versioning docs](https://docs.temporal.io/develop/java/workflows/versioning).
 
+### SDK upgrades and SDK flags
+
+Upgrading the Temporal Java SDK can change default behavior through internal "SDK flags" recorded in workflow histories.  For example, Temporal Java SDK 1.40 enables `CANCEL_AWAIT_TIMER_ON_CONDITION` and `VERSION_WAIT_FOR_MARKER` by default.  Histories recorded by older SDK versions are still replayed using their original behavior, and this SDK's test suite pins that with a history recorded under 1.38 (using `get-version` and a timed `await`) that is replayed under 1.40.  We recommend the same practice before any SDK upgrade: capture histories from the current release, then run them through [[temporal.testing.replayer]] after bumping.
+
 **Workflow code changes that require versioning:**
 
 - Adding or removing activity invocations

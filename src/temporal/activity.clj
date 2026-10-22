@@ -10,7 +10,8 @@
             [temporal.internal.promise :as ip]
             [temporal.internal.utils :as u])
   (:import [io.temporal.workflow Workflow]
-           [io.temporal.activity Activity ActivityCancellationToken]))
+           [io.temporal.activity Activity]
+           [io.temporal.common CancellationToken]))
 
 (defn heartbeat
   "
@@ -75,17 +76,18 @@ When `false` the activity is a Standalone Activity (introduced in Temporal Java 
 
 (defn get-cancellation-token
   "
-Returns an [ActivityCancellationToken](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/activity/ActivityCancellationToken.html)
+Returns a [CancellationToken](https://www.javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/common/CancellationToken.html)
 that can be used to detect activity cancellation without requiring a heartbeat response. Unlike [[heartbeat]],
 this allows cancellation detection even in activities that do not heartbeat.
 
 **Requires a recent Temporal server version** to deliver cancellation via this path.
-Introduced in Temporal Java SDK 1.36.
+Introduced in Temporal Java SDK 1.36 as `io.temporal.activity.ActivityCancellationToken`; that type was
+removed in 1.38 in favor of the generic `io.temporal.common.CancellationToken`.
 
 Use the native helper functions below to interact with the token without Java interop:
 - [[cancellation-requested?]] — non-blocking boolean check
 - [[throw-if-cancelled!]] — throw if cancelled (convenient for checkpointed loops)
-- [[cancellation-future]] — promesa-compatible promise that completes on cancellation
+- [[cancellation-future]] — promesa-compatible promise that resolves (as a failure) on cancellation
 
 ```clojure
 (defactivity my-activity
@@ -98,7 +100,7 @@ Use the native helper functions below to interact with the token without Java in
         (recur)))))
 ```
 "
-  ^ActivityCancellationToken []
+  ^CancellationToken []
   (let [ctx (Activity/getExecutionContext)]
     (.getCancellationToken ctx)))
 
@@ -108,7 +110,7 @@ Use the native helper functions below to interact with the token without Java in
 Non-blocking. Use in polling loops together with [[get-cancellation-token]].
 
 See also [[throw-if-cancelled!]] for a throw-on-cancel variant."
-  [^ActivityCancellationToken token]
+  [^CancellationToken token]
   (.isCancellationRequested token))
 
 (defn throw-if-cancelled!
@@ -116,17 +118,18 @@ See also [[throw-if-cancelled!]] for a throw-on-cancel variant."
 No-op otherwise. Useful as a lightweight cancellation checkpoint inside loops.
 
 See also [[cancellation-requested?]] for a non-throwing variant."
-  [^ActivityCancellationToken token]
+  [^CancellationToken token]
   (.throwIfCancellationRequested token))
 
 (defn cancellation-future
-  "Returns a promesa-compatible promise that completes (with `nil`) when cancellation is requested.
+  "Returns a promesa-compatible promise that resolves as a failure with `ActivityCanceledException`
+when cancellation is requested. It never resolves successfully.
 
 Useful for waiting on cancellation concurrently without polling. Deref (`@`) will block until
-the activity is cancelled. Compose with promesa combinators (e.g. `p/race`) as needed.
+the activity is cancelled, then throw. Compose with promesa combinators (e.g. `p/race`) as needed.
 
 See also [[cancellation-requested?]] for a non-blocking state check."
-  [^ActivityCancellationToken token]
+  [^CancellationToken token]
   (->> (.getCancellationFuture token)
        ip/->temporal
        pt/-promise))
@@ -152,6 +155,9 @@ Arguments:
 | :start-to-close-timeout    | Maximum time of a single Activity execution attempt.                                       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | 3 seconds |
 | :schedule-to-close-timeout | Total time that a workflow is willing to wait for Activity to complete.                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :schedule-to-start-timeout | Time that the Activity Task can stay in the Task Queue before it is picked up by a Worker. | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :task-queue                | Task queue to dispatch the activity to, if different from the workflow's.                  | String | same as workflow |
+| :priority                  | Priority/fairness options (see [[temporal.common/priority-options]])                       | map | |
+| :summary                   | Single-line fixed summary shown in UI/CLI (Temporal Markdown)                              | String | |
 
 #### cancellation types
 
@@ -201,6 +207,7 @@ Arguments:
 | :retry-options             | Define how activity is retried in case of failure.                                         | [[temporal.common/retry-options]] | |
 | :do-not-include-args       | When set to true, the serialized arguments of the local Activity are not included in the Marker Event that stores the local Activity's invocation result. | boolean | false |
 | :local-retry-threshold     | Maximum time to retry locally, while keeping the Workflow Task open via a Heartbeat.       | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
+| :summary                   | Single-line fixed summary shown in UI/CLI (Temporal Markdown)                              | String | |
 
 ```clojure
 (defactivity my-activity

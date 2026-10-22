@@ -52,6 +52,8 @@ If you need to explicitly control TLS behavior:
 
 Since Temporal Java SDK 1.36, **GZIP compression is enabled by default** on all gRPC calls. This is transparent to most users but may make traffic harder to inspect with tools like Wireshark or grpcurl.
 
+Since Temporal Java SDK 1.36.1, if a unary call is rejected by the server because it doesn't support decompression, the client automatically retries that call uncompressed and remembers the method so subsequent calls to it skip compression — other methods keep using gzip. This requires no configuration.
+
 To disable compression (e.g. for debugging or environments where compression adds overhead):
 
 ```clojure

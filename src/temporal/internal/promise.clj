@@ -148,10 +148,21 @@
   (-rejected? [it] (let [^Promise p (.p it)] (and (.isCompleted p) (some? (.getFailure p)))))
   (-pending? [it] (not (.isCompleted ^Promise (.p it)))))
 
-(extend-protocol pt/IAwaitable
+;; IJoinable/IAwaitable: promesa 12 routes p/join, p/await and p/await! through
+;; IJoinable. PromiseAdapter must implement it explicitly because it is also a
+;; CompletionStage, and promesa's CompletionStage impl calls
+;; .toCompletableFuture, which PromiseAdapter does not support. IAwaitable is
+;; kept (delegating to -join) for callers that invoke -await! directly.
+(extend-protocol pt/IJoinable
   PromiseAdapter
-  (-await!
+  (-join
     ([it] (.get ^Promise (.p it)))
     ([it duration]
      (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
        (.get ^Promise (.p it) (long ms) TimeUnit/MILLISECONDS)))))
+
+(extend-protocol pt/IAwaitable
+  PromiseAdapter
+  (-await!
+    ([it] (pt/-join it))
+    ([it duration] (pt/-join it duration))))

@@ -8,12 +8,13 @@
    [temporal.common :as common]
    [temporal.internal.child-workflow :as cw]
    [temporal.internal.exceptions :as e]
+   [temporal.internal.promise :as ip]
    [temporal.internal.search-attributes :as sa]
    [temporal.internal.utils :as u]
    [temporal.internal.workflow :as w])
   (:import [io.temporal.api.common.v1 WorkflowExecution]
            [io.temporal.common InitialVersioningBehavior]
-           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub Workflow WorkflowLock]
+           [io.temporal.workflow ContinueAsNewOptions ContinueAsNewOptions$Builder DynamicQueryHandler DynamicUpdateHandler ExternalWorkflowStub TimerOptions TimerOptions$Builder Workflow WorkflowLock]
            [java.util.function Supplier]
            [java.time Duration])
   (:refer-clojure :exclude [await]))
@@ -40,6 +41,60 @@
   "Efficiently parks the workflow for 'duration'"
   [^Duration duration]
   (Workflow/sleep duration))
+
+(def ^:no-doc timer-options-spec
+  {:summary #(.setSummary ^TimerOptions$Builder %1 %2)})
+
+(defn ^:no-doc timer-options->
+  ^TimerOptions [options]
+  (u/build (TimerOptions/newBuilder (TimerOptions/getDefaultInstance)) timer-options-spec options))
+
+(defn new-timer
+  "
+Starts a timer for 'duration' and returns a promise that resolves once it fires.
+
+Unlike [[sleep]], this does not block the workflow thread while the timer is pending — compose the
+returned promise with other promises (e.g. [[temporal.promise/race]]) to wait on a timer alongside
+other work.
+
+Arguments:
+
+- `duration`: How long the timer should run, as a [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html)
+- `options`: (optional) Options map to customize the timer (see below)
+
+#### options map
+
+| Value     | Description                                                    | Type   | Default |
+| --------- | --------------------------------------------------------------| ------ | ------- |
+| :summary  | Single-line fixed summary shown in UI/CLI (Temporal Markdown) | String | |
+
+```clojure
+(let [timer (new-timer (Duration/ofMinutes 5) {:summary \"cooldown\"})]
+  @timer)
+```
+"
+  ([^Duration duration] (new-timer duration {}))
+  ([^Duration duration options]
+   (ip/->PromiseAdapter (Workflow/newTimer duration (timer-options-> options)))))
+
+(defn set-current-details
+  "
+Sets the current details for this workflow execution, visible in the UI/CLI while the workflow is
+running. Unlike a static summary, this may be updated freely as the workflow progresses.
+
+Introduced in Temporal Java SDK 1.36; stabilized (dropped `@Experimental`) in 1.38.
+
+```clojure
+(set-current-details \"awaiting approval from finance\")
+```
+"
+  [^String details]
+  (Workflow/setCurrentDetails details))
+
+(defn get-current-details
+  "Returns the current details most recently set with [[set-current-details]], or `nil` if unset."
+  []
+  (Workflow/getCurrentDetails))
 
 (def default-version (int Workflow/DEFAULT_VERSION))
 
@@ -214,6 +269,10 @@ Arguments:
 | :cron-schedule              | A cron schedule string                                                                     | String | |
 | :cancellation-type          | In case of a child workflow cancellation it fails with a CanceledFailure                   | See `cancellation types` below | |
 | :memo                       | Specifies additional non-indexed information in result of list workflow                    | String | |
+| :search-attributes          | Search attributes for the child workflow. See [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). | Map | |
+| :priority                   | Priority/fairness options (see [[temporal.common/priority-options]])                       | map | |
+| :static-summary             | Single-line fixed summary shown in UI/CLI (Temporal Markdown); cannot be updated after start | String | |
+| :static-details             | Multi-line fixed details shown in UI/CLI (Temporal Markdown); cannot be updated after start  | String | |
 
 #### cancellation types
 
@@ -271,7 +330,7 @@ Arguments:
    :workflow-task-timeout         #(.setWorkflowTaskTimeout ^ContinueAsNewOptions$Builder %1 %2)
    :retry-options                 #(.setRetryOptions ^ContinueAsNewOptions$Builder %1 (common/retry-options-> %2))
    :memo                          #(.setMemo ^ContinueAsNewOptions$Builder %1 %2)
-   :search-attributes             #(.setSearchAttributes ^ContinueAsNewOptions$Builder %1 %2)
+   :search-attributes             #(.setTypedSearchAttributes ^ContinueAsNewOptions$Builder %1 (sa/search-attributes-> %2))
    :initial-versioning-behavior   #(.setInitialVersioningBehavior ^ContinueAsNewOptions$Builder %1
                                                                   (or (get initial-versioning-behavior-> %2)
                                                                       (throw (IllegalArgumentException. (str "Unknown :initial-versioning-behavior " %2 ". Must be one of " (keys initial-versioning-behavior->))))))})
@@ -304,7 +363,7 @@ Arguments:
 | :workflow-task-timeout         | Timeout for individual workflow tasks                                                                    | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :retry-options                 | Retry options for the new run                                                                            | [[temporal.common/retry-options]] | |
 | :memo                          | Memo fields for the new run                                                                              | Map          | |
-| :search-attributes             | Search attributes for the new run. **Since Temporal Java SDK 1.33:** omitting this carries over the current run's search attributes. Pass an empty map `{}` to explicitly clear them. | Map | carries over (Temporal Java SDK 1.33+) |
+| :search-attributes             | Search attributes for the new run. Supports simple and typed formats; see [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). **Since Temporal Java SDK 1.33:** omitting this carries over the current run's search attributes. Pass an empty map `{}` to explicitly clear them. | Map | carries over (Temporal Java SDK 1.33+) |
 | :initial-versioning-behavior   | Versioning behavior for the new run. `:auto-upgrade` (Temporal Java SDK 1.34): PINNED workflows upgrade to the latest deployment. `:use-ramping-version` (Temporal Java SDK 1.36): pins to the task queue's Ramping Version. | keyword | |
 
 ```clojure
@@ -328,20 +387,12 @@ Search attributes are indexed metadata that can be used to filter and search for
 in the Temporal UI and via the Visibility API. Unlike memo, search attributes are indexed
 and can be used in list workflow queries.
 
-The attributes map should have string keys (attribute names) and values that are maps
-with :type and :value keys. To unset an attribute, pass nil as the value.
+Input formats and inference rules are centralized in [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats).
 
 Arguments:
-- `attrs`: A map of {attribute-name {:type type :value value}} where type is one of:
-  - :text - Full-text searchable string
-  - :keyword - Exact-match string
-  - :int - 64-bit integer (Long)
-  - :double - 64-bit floating point
-  - :bool - Boolean
-  - :datetime - OffsetDateTime
-  - :keyword-list - List of exact-match strings
+- `attrs`: Search attribute map in either simple or typed format.
 
-To unset an attribute, use {:type type :value nil}
+To unset an attribute, use either `{\"Key\" nil}` (simple) or `{\"Key\" {:type type :value nil}}` (typed).
 
 Note: Search attributes must be pre-registered with the Temporal server before use.
 In test environments, use the :search-attributes option when creating the test environment.

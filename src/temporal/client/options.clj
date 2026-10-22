@@ -94,7 +94,7 @@
 | :keepalive-timeout        | Set the keep alive timeout                                                  | [Duration](https://docs.oracle.com/javase/8/docs/api//java/time/Duration.html) | |
 | :keepalive-without-stream | Set if client sends keepalive pings even with no active RPCs                | boolean       | false |
 | :metrics-scope            | The scope to be used for metrics reporting                                  | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
-| :grpc-compression         | Sets gRPC transport compression (since Temporal Java SDK 1.36, GZIP is the default). Pass `GrpcCompression/NONE` to disable. | [GrpcCompression](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/GrpcCompression.html) | GZIP |
+| :grpc-compression         | Sets gRPC transport compression (since Temporal Java SDK 1.36, GZIP is the default; since 1.36.1, a call that the server rejects for compression automatically retries uncompressed). Pass `GrpcCompression/NONE` to disable. | [GrpcCompression](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/GrpcCompression.html) | GZIP |
 | :plugins                  | Collection of plugins to customize gRPC stubs behavior (since Temporal Java SDK 1.33).       | [WorkflowServiceStubsPlugin](https://javadoc.io/doc/io.temporal/temporal-sdk/latest/io/temporal/serviceclient/WorkflowServiceStubsPlugin.html) | |
 
 "

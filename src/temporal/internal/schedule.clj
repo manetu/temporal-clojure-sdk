@@ -1,9 +1,12 @@
 (ns ^:no-doc temporal.internal.schedule
-  (:require [temporal.internal.utils :as u]
+  (:require [temporal.internal.search-attributes :as sa]
+            [temporal.internal.utils :as u]
             [temporal.internal.workflow :as w])
   (:import [io.temporal.api.enums.v1 ScheduleOverlapPolicy]
            [io.temporal.client.schedules
             Schedule
+            ScheduleBackfill
+            ScheduleUpdate
             Schedule$Builder
             ScheduleActionStartWorkflow
             ScheduleActionStartWorkflow$Builder
@@ -75,8 +78,20 @@
   ^ScheduleState [params]
   (u/build (ScheduleState/newBuilder) schedule-state-spec params))
 
+(defn schedule-backfill->
+  ^ScheduleBackfill [params]
+  (if-let [overlap (:overlap params)]
+    (ScheduleBackfill. (:start-at params) (:end-at params) (overlap-policy-> overlap))
+    (ScheduleBackfill. (:start-at params) (:end-at params))))
+
+(defn schedule-backfills->
+  [backfills]
+  (mapv schedule-backfill-> backfills))
+
 (def schedule-options-spec
-  {:memo                  #(.setMemo ^ScheduleOptions$Builder %1 %2)
+  {:backfills             #(.setBackfills ^ScheduleOptions$Builder %1 (schedule-backfills-> %2))
+   :memo                  #(.setMemo ^ScheduleOptions$Builder %1 %2)
+   :search-attributes     #(.setTypedSearchAttributes ^ScheduleOptions$Builder %1 (sa/search-attributes-> %2))
    :trigger-immediately?  #(.setTriggerImmediately ^ScheduleOptions$Builder %1 %2)})
 
 (defn schedule-options->
@@ -94,3 +109,19 @@
    (u/build (Schedule/newBuilder) schedule-spec params))
   (^Schedule [schedule params]
    (u/build (Schedule/newBuilder schedule) schedule-spec params)))
+
+(defn schedule-update->
+  "Builds a `ScheduleUpdate` from an existing `schedule` and reschedule `params`.
+
+   When `params` contains `:schedule :search-attributes`, the schedule-level
+   search attributes are updated using the two-arg `ScheduleUpdate`
+   constructor (both simple and typed input formats are accepted). The
+   supplied map replaces the entire set: existing attributes not present in
+   the map are removed, and an empty map clears them all. When the key is
+   omitted, the existing search attributes are preserved."
+  ^ScheduleUpdate [schedule params]
+  (let [updated (schedule-> schedule params)
+        sa-input (get-in params [:schedule :search-attributes])]
+    (if (some? sa-input)
+      (ScheduleUpdate. updated (sa/search-attributes-> sa-input))
+      (ScheduleUpdate. updated))))

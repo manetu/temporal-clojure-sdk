@@ -117,6 +117,8 @@ Options for configuring workers (See [[start]])
 | :activity-task-pollers-behavior                 |           | Configures poller scaling behavior for activity tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                 | keyword / map                                                                  |                                                             |
 | :nexus-task-pollers-behavior                    |           | Configures poller scaling behavior for nexus tasks. Use :autoscaling for automatic scaling or a map with {:type :autoscaling :min-pollers n :max-pollers m}.                                                                                    | keyword / map                                                                  |                                                             |
 | :allow-activity-heartbeat-during-shutdown       |           | When true, removes the restriction on activity heartbeats during graceful shutdown. **Trade-off:** enabling this makes `ActivityWorkerShutdownException` undetectable — activities can no longer distinguish normal heartbeat failure from worker shutdown. | boolean | false |
+| :disable-eager-execution                        |           | Disables eager activity execution, where the server piggybacks an activity task directly onto a workflow task completion response instead of a separate poll. | boolean | false |
+| :max-eager-activity-reservations-per-workflow-task |         | Maximum number of activity slots reserved for eager execution when completing a workflow task. Must be positive; use `:disable-eager-execution` to turn eager execution off entirely — setting this to `0` fails at worker start rather than at options-build time. (Temporal Java SDK 1.38+) | int | 3 |
 
 #### dispatch-table
 
@@ -155,7 +157,9 @@ Options for configuring workers (See [[start]])
    :workflow-task-pollers-behavior                   #(.setWorkflowTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
    :activity-task-pollers-behavior                   #(.setActivityTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
    :nexus-task-pollers-behavior                      #(.setNexusTaskPollersBehavior ^WorkerOptions$Builder %1 (poller-behavior-> %2))
-   :allow-activity-heartbeat-during-shutdown         #(.setAllowActivityHeartbeatDuringShutdown ^WorkerOptions$Builder %1 %2)})
+   :allow-activity-heartbeat-during-shutdown         #(.setAllowActivityHeartbeatDuringShutdown ^WorkerOptions$Builder %1 %2)
+   :disable-eager-execution                          #(.setDisableEagerExecution ^WorkerOptions$Builder %1 %2)
+   :max-eager-activity-reservations-per-workflow-task #(.setMaxEagerActivityReservationsPerWorkflowTask ^WorkerOptions$Builder %1 %2)})
 
 (defn ^:no-doc worker-options->
   ^WorkerOptions [params]

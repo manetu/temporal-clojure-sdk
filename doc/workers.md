@@ -91,7 +91,13 @@ Workers and clients support distributed tracing via the `temporal-opentracing` l
 
 When `OpenTracingOptions` is omitted, the interceptors fall back to `GlobalTracer.get()`.  Using the options builder is preferred for testability — pass a `MockTracer` in tests to verify that spans are captured.
 
-As of Temporal Java SDK 1.36, a new `OpenTracingActivityClientInterceptor` is available for tracing standalone activities executed via `ActivityClient`.  This will be wired in when `temporal.client.activity` (standalone activity support) is added to the SDK.
+As of Temporal Java SDK 1.36, a new `OpenTracingActivityClientInterceptor` is available for tracing Standalone Activities executed via `ActivityClient`.  With [[temporal.client.activity]] now available, wire it in the same way as the other interceptors above, via `:interceptors` in the options map passed to [[temporal.client.activity/create-client]]:
+
+```clojure
+(require '[temporal.client.activity :as ca])
+
+(ca/create-client {:interceptors [(OpenTracingActivityClientInterceptor. opts)]})
+```
 
 ## Plugins
 

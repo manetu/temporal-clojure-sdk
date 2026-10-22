@@ -4,7 +4,7 @@
   (:require [clojure.core.async :refer [<! go] :as async]
             [clojure.core.protocols :as p]
             [clojure.datafy :as d]
-            [slingshot.slingshot :refer [try+]]
+            [clj-commons.slingshot :refer [try+]]
             [taoensso.timbre :as log]
             [temporal.common :as common]
             [temporal.internal.exceptions :as e]
@@ -28,7 +28,8 @@
    :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^ActivityOptions$Builder %1 %2)
    :schedule-to-start-timeout #(.setScheduleToStartTimeout ^ActivityOptions$Builder %1 %2)
    :task-queue                #(.setTaskQueue ^ActivityOptions$Builder %1 %2)
-   :priority                  #(.setPriority ^ActivityOptions$Builder %1 (common/priority-options-> %2))})
+   :priority                  #(.setPriority ^ActivityOptions$Builder %1 (common/priority-options-> %2))
+   :summary                   #(.setSummary ^ActivityOptions$Builder %1 %2)})
 
 (defn import-invoke-options
   [{:keys [start-to-close-timeout schedule-to-close-timeout] :as params}]
@@ -50,7 +51,8 @@
    :schedule-to-close-timeout #(.setScheduleToCloseTimeout ^LocalActivityOptions$Builder %1  %2)
    :retry-options             #(.setRetryOptions ^LocalActivityOptions$Builder %1 (local-retry-options-> %2))
    :do-not-include-args       #(.setDoNotIncludeArgumentsIntoMarker ^LocalActivityOptions$Builder %1 %2)
-   :local-retry-threshold     #(.setLocalRetryThreshold ^LocalActivityOptions$Builder %1 %2)})
+   :local-retry-threshold     #(.setLocalRetryThreshold ^LocalActivityOptions$Builder %1 %2)
+   :summary                   #(.setSummary ^LocalActivityOptions$Builder %1 %2)})
 
 (defn local-invoke-options->
   ^LocalActivityOptions [{:keys [retry-options] :or {retry-options {}} :as params}]

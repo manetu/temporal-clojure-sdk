@@ -1,0 +1,247 @@
+;; Copyright © Manetu, Inc.  All rights reserved
+
+(ns temporal.test.types-test
+  (:require [clojure.test :refer [deftest testing is]]
+            [same.core :refer [ish?]]
+            [temporal.client.worker :as worker]
+            [temporal.client.options :as o]
+            [temporal.internal.activity :as a]
+            [temporal.internal.child-workflow :as cw]
+            [temporal.internal.schedule :as s]
+            [temporal.internal.search-attributes :as sa]
+            [temporal.internal.workflow :as w])
+  (:import [java.time Duration Instant]
+           [io.temporal.client.schedules ScheduleBackfill]
+           [io.temporal.shaded.io.grpc Grpc InsecureChannelCredentials Metadata]
+           [io.temporal.shaded.io.grpc.netty.shaded.io.grpc.netty GrpcSslContexts]))
+
+(deftest workflow-options
+  (testing "Verify that our workflow options work"
+    (let [base {:workflow-id "foo"
+                :task-queue "bar"
+                :workflow-execution-timeout (Duration/ofSeconds 1)
+                :workflow-run-timeout (Duration/ofSeconds 1)
+                :workflow-task-timeout (Duration/ofSeconds 1)
+                :retry-options {:maximum-attempts 1}
+                :cron-schedule "* * * * *"
+                :memo {"foo" "bar"}
+                :priority {:priority-key 5
+                           :fairness-key :premium
+                           :fairness-weight 3.14}
+                :static-summary "summary"
+                :static-details "details"}
+          simple (w/wf-options-> (assoc base :search-attributes {"foo" "bar"}))
+          typed (w/wf-options-> (assoc base :search-attributes {"foo" {:type :keyword :value "bar"}}))]
+      (is (-> simple (.getWorkflowId) (= "foo")))
+      (is (-> simple (.getTaskQueue) (= "bar")))
+      (is (-> simple (.getPriority) (.getPriorityKey) (= 5)))
+      (is (-> simple (.getPriority) (.getFairnessKey) (= "premium")))
+      (is (ish? (-> simple (.getPriority) (.getFairnessWeight)) 3.14))
+      (is (= "summary" (-> simple (.getStaticSummary))))
+      (is (= "details" (-> simple (.getStaticDetails))))
+      (is (= "bar"
+             (-> simple .getTypedSearchAttributes sa/search-attributes->map (get "foo") :value)))
+      (is (= {"foo" {:type :keyword :value "bar"}}
+             (-> typed .getTypedSearchAttributes sa/search-attributes->map))))))
+
+(deftest client-options
+  (testing "Verify that our stub options work"
+    (let [x (o/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
+                               :ssl-context              (-> (GrpcSslContexts/forClient) (.build))
+                               :target                   "foo:1234"
+                               :enable-https             false
+                               :rpc-timeout              (Duration/ofSeconds 1)
+                               :rpc-long-poll-timeout    (Duration/ofSeconds 1)
+                               :rpc-query-timeout        (Duration/ofSeconds 1)
+                               :backoff-reset-freq       (Duration/ofSeconds 1)
+                               :grpc-reconnect-freq      (Duration/ofSeconds 1)
+                               :headers                  (Metadata.)
+                               :enable-keepalive         true
+                               :keepalive-time           (Duration/ofSeconds 1)
+                               :keepalive-timeout        (Duration/ofSeconds 1)
+                               :keepalive-without-stream true})]
+      (is (-> x (.getTarget) (= "foo:1234")))))
+  (testing "Verify that our client options work"
+    (let [x (o/workflow-client-options-> {:identity "test"
+                                          :namespace "test"})]
+      (is (-> x (.getIdentity) (= "test")))
+      (is (-> x (.getNamespace) (= "test")))))
+  (testing "Verify that mixed client/stub options work"
+    (let [options {:target "foo:1234" :namespace "default"}]
+      (is (some? (o/stub-options-> options)))
+      (is (some? (o/workflow-client-options-> options))))))
+
+(deftest worker-options
+  (testing "Verify that our worker-options work"
+    (let [x (worker/worker-options-> {:max-concurrent-activity-task-pollers            2
+                                      :max-concurrent-activity-execution-size          10
+                                      :max-concurrent-local-activity-execution-size    2
+                                      :max-concurrent-workflow-task-pollers            2
+                                      :max-concurrent-workflow-task-execution-size     10
+                                      :default-deadlock-detection-timeout              1000
+                                      :default-heartbeat-throttle-interval             (Duration/ofSeconds 10)
+                                      :max-heartbeat-throttle-interval                 (Duration/ofSeconds 10)
+                                      :local-activity-worker-only                      false
+                                      :max-taskqueue-activities-per-second             1.0
+                                      :max-workers-activities-per-second               1.0
+                                      :disable-eager-execution                         true
+                                      :max-eager-activity-reservations-per-workflow-task 5})]
+      (is (-> x (.isLocalActivityWorkerOnly) false?))
+      (is (-> x (.isEagerExecutionDisabled) true?))
+      (is (= 5 (-> x (.getMaxEagerActivityReservationsPerWorkflowTask)))))))
+
+(deftest activity-options
+  (testing "Verify that our activity options work"
+    (let [x (a/invoke-options-> {:start-to-close-timeout (Duration/ofSeconds 1)
+                                 :summary "summary"})]
+      (is (= "summary" (-> x (.getSummary))))))
+  (testing "Verify that our local activity options work"
+    (let [x (a/local-invoke-options-> {:start-to-close-timeout (Duration/ofSeconds 1)
+                                       :summary "summary"})]
+      (is (= "summary" (-> x (.getSummary)))))))
+
+(deftest schedule-client-options
+  (testing "Verify that our stub options work"
+    (let [x (o/stub-options-> {:channel                  (-> (Grpc/newChannelBuilder "foo:1234" (InsecureChannelCredentials/create)) (.build))
+                               :ssl-context              (-> (GrpcSslContexts/forClient) (.build))
+                               :target                   "foo:1234"
+                               :enable-https             false
+                               :rpc-timeout              (Duration/ofSeconds 1)
+                               :rpc-long-poll-timeout    (Duration/ofSeconds 1)
+                               :rpc-query-timeout        (Duration/ofSeconds 1)
+                               :backoff-reset-freq       (Duration/ofSeconds 1)
+                               :grpc-reconnect-freq      (Duration/ofSeconds 1)
+                               :headers                  (Metadata.)
+                               :enable-keepalive         true
+                               :keepalive-time           (Duration/ofSeconds 1)
+                               :keepalive-timeout        (Duration/ofSeconds 1)
+                               :keepalive-without-stream true})]
+      (is (-> x (.getTarget) (= "foo:1234")))))
+  (testing "Verify that our client options work"
+    (let [x (o/schedule-client-options-> {:identity "test"
+                                          :namespace "test"})]
+      (is (-> x (.getIdentity) (= "test")))
+      (is (-> x (.getNamespace) (= "test")))))
+  (testing "Verify that mixed client/stub options work"
+    (let [options {:target "foo:1234" :namespace "default"}]
+      (is (some? (o/stub-options-> options)))
+      (is (some? (o/schedule-client-options-> options))))))
+
+(deftest schedule-options
+  (testing "Verify that a schedule can be constructed with the action, spec, policy, and state"
+    (let [action {:arguments {:value 1}
+                  :options {:workflow-id "my-workflow-execution"
+                            :task-queue "queue"}
+                  :workflow-type "my-workflow"}
+          spec {:cron-expressions ["0 * * * * "]
+                :end-at (Instant/now)
+                :jitter (Duration/ofSeconds 1)
+                :start-at (Instant/now)
+                :timezone "US/Central"}
+          policy {:pause-on-failure? true
+                  :catchup-window (Duration/ofSeconds 1)
+                  :overlap :skip}
+          state {:paused? true
+                 :note "note"
+                 :limited-action? false}
+          typed-backfill {:start-at (Instant/parse "2024-01-01T00:00:00Z")
+                          :end-at (Instant/parse "2024-01-01T01:00:00Z")
+                          :overlap :buffer-one}
+          simple-backfill {:start-at (Instant/parse "2024-01-02T00:00:00Z")
+                           :end-at (Instant/parse "2024-01-02T01:00:00Z")}
+          schedule-options-typed {:backfills [typed-backfill]
+                                  :memo {"source" "types-test"}
+                                  :search-attributes {"foo" {:type :keyword :value "bar"}}
+                                  :trigger-immediately? true}
+          schedule-options-simple {:backfills [simple-backfill]
+                                   :memo {"source" "types-test"}
+                                   :search-attributes {"foo" "bar"}
+                                   :trigger-immediately? true}
+          schedule (s/schedule-> {:action action
+                                  :policy policy
+                                  :spec spec
+                                  :state state})
+          built-schedule-options-typed (s/schedule-options-> schedule-options-typed)
+          built-schedule-options-simple (s/schedule-options-> schedule-options-simple)
+          ^ScheduleBackfill built-typed-backfill (first (.getBackfills built-schedule-options-typed))
+          ^ScheduleBackfill built-simple-backfill (first (.getBackfills built-schedule-options-simple))]
+      (is (some? (s/schedule-action-start-workflow-> action)))
+      (is (some? (s/schedule-spec-> spec)))
+      (is (some? (s/schedule-policy-> policy)))
+      (is (some? (s/schedule-state-> state)))
+      (is (some? schedule))
+      (is (= "my-workflow" (-> schedule .getAction .getWorkflowType)))
+      (is (= "my-workflow-execution" (-> schedule .getAction .getOptions .getWorkflowId)))
+      (is (= ["0 * * * * "] (-> schedule .getSpec .getCronExpressions)))
+      (is (-> schedule .getPolicy .isPauseOnFailure))
+      (is (= "note" (-> schedule .getState .getNote)))
+      (is (-> schedule .getState .isPaused))
+      (is (= "types-test" (-> built-schedule-options-typed .getMemo (get "source"))))
+      (is (= (.getStartAt built-typed-backfill) (Instant/parse "2024-01-01T00:00:00Z")))
+      (is (= (.getEndAt built-typed-backfill) (Instant/parse "2024-01-01T01:00:00Z")))
+      (is (= (.getOverlapPolicy built-typed-backfill) (s/overlap-policy-> :buffer-one)))
+      (is (= (.getStartAt built-simple-backfill) (Instant/parse "2024-01-02T00:00:00Z")))
+      (is (= (.getEndAt built-simple-backfill) (Instant/parse "2024-01-02T01:00:00Z")))
+      (is (= {"foo" {:type :keyword :value "bar"}}
+             (-> built-schedule-options-typed .getTypedSearchAttributes sa/search-attributes->map)))
+      (is (= {"foo" {:type :text :value "bar"}}
+             (-> built-schedule-options-simple .getTypedSearchAttributes sa/search-attributes->map))))))
+
+(deftest child-workflow-options
+  (testing "Verify that a `ChildWorkflowOptions` instance can be built properly"
+    (let [options {:workflow-id "foo"
+                   :task-queue "bar"
+                   :workflow-execution-timeout (Duration/ofSeconds 1)
+                   :workflow-run-timeout (Duration/ofSeconds 2)
+                   :workflow-task-timeout (Duration/ofSeconds 3)
+                   :retry-options {:maximum-attempts 1}
+                   :cron-schedule "* * * * *"
+                   :memo {"foo" "bar"}
+                   :search-attributes {"foo" {:type :keyword :value "child"}}
+                   :workflow-id-reuse-policy :terminate-if-running
+                   :parent-close-policy :terminate
+                   :cancellation-type :abandon
+                   :priority {:priority-key 5
+                              :fairness-key :premium
+                              :fairness-weight 3.14}
+                   :static-summary "summary"
+                   :static-details "details"}
+          child-workflow-options (cw/child-workflow-options-> options)]
+      (is (some? child-workflow-options))
+      (is (= "foo" (-> child-workflow-options .getWorkflowId)))
+      (is (= "bar" (-> child-workflow-options .getTaskQueue)))
+      (is (= (Duration/ofSeconds 1) (-> child-workflow-options .getWorkflowExecutionTimeout)))
+      (is (= (Duration/ofSeconds 2) (-> child-workflow-options .getWorkflowRunTimeout)))
+      (is (= (Duration/ofSeconds 3) (-> child-workflow-options .getWorkflowTaskTimeout)))
+      (is (= 1 (-> child-workflow-options .getRetryOptions .getMaximumAttempts)))
+      (is (= "* * * * *"  (-> child-workflow-options .getCronSchedule)))
+      (is (= {"foo" "bar"}  (-> child-workflow-options .getMemo)))
+      (is (= {"foo" {:type :keyword :value "child"}}
+             (-> child-workflow-options .getTypedSearchAttributes sa/search-attributes->map)))
+      (is (= io.temporal.api.enums.v1.WorkflowIdReusePolicy/WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+             (-> child-workflow-options .getWorkflowIdReusePolicy)))
+      (is (= io.temporal.api.enums.v1.ParentClosePolicy/PARENT_CLOSE_POLICY_TERMINATE
+             (-> child-workflow-options .getParentClosePolicy)))
+      (is (= io.temporal.workflow.ChildWorkflowCancellationType/ABANDON
+             (-> child-workflow-options .getCancellationType)))
+      (is (-> child-workflow-options (.getPriority) (.getPriorityKey) (= 5)))
+      (is (-> child-workflow-options (.getPriority) (.getFairnessKey) (= "premium")))
+      (is (ish? (-> child-workflow-options (.getPriority) (.getFairnessWeight)) 3.14))
+      (is (= "summary" (-> child-workflow-options (.getStaticSummary))))
+      (is (= "details" (-> child-workflow-options (.getStaticDetails)))))))
+
+(deftest api-key-tls-options
+  (testing "API key alone auto-enables TLS (Temporal Java SDK 1.33+ behavior)"
+    (let [x (o/stub-options-> {:target "cloud.tmprl.cloud:7233"
+                               :api-key-fn (constantly "my-key")})]
+      (is (-> x .getEnableHttps))))
+  (testing "Explicit :enable-https false overrides API key auto-TLS"
+    (let [x (o/stub-options-> {:target "localhost:7233"
+                               :api-key-fn (constantly "dev-key")
+                               :enable-https false})]
+      (is (not (-> x .getEnableHttps)))))
+  (testing "API key + ssl-context does not auto-enable TLS via the flag"
+    (let [x (o/stub-options-> {:target "cloud.tmprl.cloud:7233"
+                               :api-key-fn (constantly "my-key")
+                               :ssl-context (-> (GrpcSslContexts/forClient) (.build))})]
+      (is (not (-> x .getEnableHttps))))))

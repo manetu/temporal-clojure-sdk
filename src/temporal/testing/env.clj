@@ -40,11 +40,19 @@ Arguments:
 
 | Value                           | Description                                   | Type         | Default |
 | -------------------------       | --------------------------------------------- | ------------ | ------- |
-| :worker-factory-options         |                                               | [[worker/worker-factory-options]] | |
-| :workflow-client-options        |                                               | [[copts/client-options]] | |
-| :workflow-service-stub-options  |                                               | [[copts/stub-options]] | |
+| :worker-factory-options         |                                               | [[temporal.client.worker/worker-factory-options]] | |
+| :workflow-client-options        |                                               | [[temporal.client.options/workflow-client-options]] | |
+| :workflow-service-stub-options  |                                               | [[temporal.client.options/stub-options]] | |
 | :metrics-scope                  | The scope to be used for metrics reporting    | [Scope](https://github.com/uber-java/tally/blob/master/core/src/main/java/com/uber/m3/tally/Scope.java) | |
-| :search-attributes              | Add a map of search attributes to be registered on the Temporal Server | map | |
+| :search-attributes              | Add a map of search attributes to be registered on the Temporal Server. Format: `{\"Key\" :keyword}`. For runtime value formats, see [Search attribute input formats](/doc/workflows.md#search-attribute-input-formats). | map | |
+
+
+Valid search-attributes types: see [[temporal.workflow/upsert-search-attributes]]
+
+```clojure
+(create {:search-attributes {\"CustomerId\" :keyword
+                             \"OrderTotal\" :double}})
+```
 
 "
   (^TestWorkflowEnvironment []

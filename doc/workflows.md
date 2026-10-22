@@ -171,6 +171,8 @@ Doing so ensures that you meet the origination rules regardless of the condition
 
 You may use [temporal.workflow/await](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.workflow#await) to efficiently park the Workflow until a provided predicate evaluates to true.  The Temporal platform will re-evaluate the predicate at each major state transition of the Workflow.
 
+> **Temporal Java SDK 1.40:** The SDK flags `CANCEL_AWAIT_TIMER_ON_CONDITION` and `VERSION_WAIT_FOR_MARKER` are now enabled by default.  The former cancels the timer backing a timed `await` once its condition is satisfied; the latter affects how `get-version` waits for its marker during replay.  Histories recorded by earlier SDK versions continue to replay correctly, and no code changes are required.  See [Replay Testing](replay_testing.md) to verify your own workflows.
+
 ### Temporal Signals
 
 Your Workflow may send or receive [signals](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.signals).
@@ -468,7 +470,7 @@ Use [temporal.workflow/get-execution](https://cljdoc.org/d/io.github.manetu/temp
 
 ## Exceptions
 
-This SDK integrates with the [slingshot](https://github.com/scgilardi/slingshot) library.  Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
+This SDK integrates with the [slingshot](https://github.com/clj-commons/slingshot) library. Stones cast with Slingshot's throw+ are serialized and re-thrown across activity and workflow boundaries in a transparent manner that is compatible with Slingshot's `try+` based catch blocks.
 
 ### Managing Retries
 By default, stones cast that are not caught locally by an Activity or Workflow trigger ApplicationFailure semantics and are thus subject to the overall Retry Policies in place.   However, the developer may force a given stone to be non-retriable by setting the flag '::non-retriable?' within the object.
@@ -477,7 +479,7 @@ Example:
 
 ```clojure
 (require `[temporal.exceptions :as e])
-(require `[slingshot.slingshot :refer [throw+]])
+(require `[clj-commons.slingshot :refer [throw+]])
 
 (defactivity my-activity
    [ctx args]
@@ -574,8 +576,51 @@ You can set search attributes when starting a Workflow:
 
 ```clojure
 (c/create-workflow client my-workflow {:task-queue task-queue
-                                       :search-attributes {"CustomerId" "12345"}})
+                                       :search-attributes {"CustomerId" {:type :keyword :value "12345"}}})
 ```
+
+### Search attribute input formats
+
+APIs that accept `:search-attributes` support both simple and typed values in the same map.
+
+```clj
+;; Simple format (convenient)
+{"CustomerId" "12345"}
+```
+
+```clj
+;; Typed format (explicit)
+{"CustomerId" {:type :keyword :value "12345"}}
+```
+
+Use the **simple format** when you want concise call sites and are fine with runtime type inference.
+Use the **typed format** when you need explicit control over the indexed type.
+
+Search attributes are a map of `{attribute-name value}` where `value` is either:
+- a simple value (inferred at runtime), or
+- a typed value map: `{:type type :value value}`
+
+Accepted typed `:type` values:
+- `:text` - Full-text searchable string
+- `:keyword` - Exact-match string
+- `:int` - 64-bit integer (`Long`)
+- `:double` - 64-bit floating point
+- `:bool` - Boolean
+- `:datetime` - `OffsetDateTime`
+- `:keyword-list` - List of exact-match strings
+
+Simple values are inferred as:
+- `"x"` -> `:text`
+- `:x` / `'x` -> `:keyword` (stored as string name)
+- integer -> `:int`
+- number -> `:double`
+- boolean -> `:bool`
+- `OffsetDateTime` -> `:datetime`
+- sequence of string/keyword/symbol -> `:keyword-list`
+
+To unset an attribute, set its value to `nil`:
+- typed: `{"Status" {:type :keyword :value nil}}`
+- simple: `{"Status" nil}`
 
 ### Upserting Search Attributes
 
@@ -591,13 +636,6 @@ To update search attributes during Workflow execution, use [temporal.workflow/up
   (w/upsert-search-attributes {"OrderStatus" {:type :keyword :value "completed"}}))
 ```
 
-Supported search attribute types:
-- `:text` - Full-text searchable string
-- `:keyword` - Exact-match string
-- `:int` - 64-bit integer
-- `:double` - 64-bit floating point
-- `:bool` - Boolean
-- `:datetime` - OffsetDateTime
-- `:keyword-list` - List of exact-match strings
+See [Search attribute input formats](#search-attribute-input-formats) for supported types and inference rules.
 
 Note: Custom search attributes must be pre-registered with the Temporal server before use.

@@ -2,15 +2,13 @@
 
 (ns temporal.test.utils
   "Utilities common to all tests"
-  (:require
-   [taoensso.timbre :as log]
-   [temporal.client.core :as c]
-   [temporal.converter.default :as default-data-converter]
-   [temporal.converter.json :as json]
-   [temporal.testing.env :as e])
-  (:import
-   [io.temporal.common.converter NullPayloadConverter]
-   [java.time Duration]))
+  (:require [taoensso.timbre :as log]
+            [temporal.client.core :as c]
+            [temporal.converter.default :as default-data-converter]
+            [temporal.converter.json :as json]
+            [temporal.testing.env :as e])
+  (:import [io.temporal.common.converter NullPayloadConverter]
+           [java.time Duration]))
 
 (log/set-min-level! :trace)
 
@@ -41,7 +39,8 @@
    (create-service {}))
 
   ([options]
-   (let [env     (e/create {:workflow-client-options options})
+   (let [env     (e/create {:workflow-client-options options
+                            :search-attributes {"foo" :keyword}})
          client  (e/get-client env)
          worker  (e/start env {:task-queue task-queue})]
      (log/trace "options:" (.getOptions client))

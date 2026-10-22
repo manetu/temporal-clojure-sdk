@@ -84,9 +84,13 @@ Use [temporal.activity/in-workflow?](https://cljdoc.org/d/io.github.manetu/tempo
 | Namespace                    | Usage                                                                        |
 | ---------------------------- | ---------------------------------------------------------------------------- |
 | `temporal.activity`          | Activities executed by workers as part of workflow orchestration (current)   |
-| `temporal.client.activity`   | Direct standalone activity invocation outside a workflow context (Temporal Java SDK 1.35+) |
+| `temporal.client.activity`   | Direct standalone activity invocation outside a workflow context (Temporal Java SDK 1.35+; generally available as of 1.39) |
 
 Activities defined with `defactivity` in `temporal.activity` work in both contexts. The difference is in how they are invoked: via `a/invoke` inside a workflow, or via `temporal.client.activity` for standalone execution. In standalone context, `:in-workflow?` returns `false` and workflow-scoped fields are `nil`.
+
+**Standalone Activities are generally available as of Temporal Java SDK 1.39.** The underlying `ActivityClient` API is no longer marked `@Experimental`, so it is covered by the SDK's normal compatibility guarantees.
+
+The `:static-summary` start option continues to be the key used to set a summary visible in the Temporal UI. Temporal Java SDK 1.39 renamed the underlying builder method from `setStaticSummary` to `setSummary`; this wrapper handles the rename internally, so existing code using `:static-summary` is unaffected.
 
 ## Cancellation
 
@@ -97,6 +101,8 @@ The traditional way to detect activity cancellation is to call [`heartbeat`](htt
 ### Detecting Cancellation via Cancellation Token
 
 Temporal Java SDK 1.36 introduced [`get-cancellation-token`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#get-cancellation-token), which provides cancellation detection **without** requiring a heartbeat. This is useful for activities that do not otherwise heartbeat.
+
+The underlying Java type backing this token was renamed in Temporal Java SDK 1.38, from `io.temporal.activity.ActivityCancellationToken` to the generic `io.temporal.common.CancellationToken`. This is transparent to callers of this wrapper — [`cancellation-requested?`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#cancellation-requested?), [`throw-if-cancelled!`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#throw-if-cancelled!), and [`cancellation-future`](https://cljdoc.org/d/io.github.manetu/temporal-sdk/CURRENT/api/temporal.activity#cancellation-future) are unaffected.
 
 > **Note:** Cancellation delivery via this API requires a recent Temporal server version.
 

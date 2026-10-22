@@ -3,10 +3,11 @@
 (ns ^:no-doc temporal.internal.workflow
   (:require [clojure.core.protocols :as p]
             [clojure.datafy :as d]
-            [slingshot.slingshot :refer [try+]]
+            [clj-commons.slingshot :refer [try+]]
             [taoensso.timbre :as log]
             [temporal.common :as common]
             [temporal.internal.exceptions :as e]
+            [temporal.internal.search-attributes :as sa]
             [temporal.internal.signals :as s]
             [temporal.internal.utils :as u])
   (:import [io.temporal.api.enums.v1 WorkflowIdConflictPolicy WorkflowIdReusePolicy]
@@ -70,9 +71,11 @@
    :retry-options               #(.setRetryOptions ^WorkflowOptions$Builder %1 (common/retry-options-> %2))
    :cron-schedule               #(.setCronSchedule ^WorkflowOptions$Builder %1 %2)
    :memo                        #(.setMemo ^WorkflowOptions$Builder %1 %2)
-   :search-attributes           #(.setSearchAttributes ^WorkflowOptions$Builder %1 %2)
+   :search-attributes           #(.setTypedSearchAttributes ^WorkflowOptions$Builder %1 (sa/search-attributes-> %2))
    :start-delay                 #(.setStartDelay ^WorkflowOptions$Builder %1 %2)
-   :priority                    #(.setPriority ^WorkflowOptions$Builder %1 (common/priority-options-> %2))})
+   :priority                    #(.setPriority ^WorkflowOptions$Builder %1 (common/priority-options-> %2))
+   :static-summary              #(.setStaticSummary ^WorkflowOptions$Builder %1 %2)
+   :static-details              #(.setStaticDetails ^WorkflowOptions$Builder %1 %2)})
 
 (defn ^:no-doc wf-options->
   ^WorkflowOptions [params]
