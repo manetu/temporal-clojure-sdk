@@ -36,7 +36,7 @@
   (let [converters-map (.get converters-map-field data-converter)
         converter (.get ^Map converters-map encoding)]
     (when converter
-      (if-let [serialization-context (get serialization-context-field data-converter)]
+      (if-let [serialization-context (.get serialization-context-field data-converter)]
         (.withContext ^PayloadConverter converter serialization-context)
         converter))))
 

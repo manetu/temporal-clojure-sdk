@@ -13,8 +13,10 @@
    [io.temporal.common.converter
     DataConverterException
     EncodingKeys
-    NullPayloadConverter]
-   [io.temporal.payload.context WorkflowSerializationContext]))
+    NullPayloadConverter
+    PayloadConverter]
+   [io.temporal.payload.context WorkflowSerializationContext]
+   [java.util Optional]))
 
 (defn payload->encoding [^Payload payload]
   (.. payload
@@ -114,6 +116,23 @@
 
       (encoding/with nil :json)
       (encoding/with nil "json/plain"))))
+
+(defn context-recorder
+  "Returns a PayloadConverter that stores the SerializationContext it gets."
+  [received-context]
+  (reify PayloadConverter
+    (getEncodingType [_] "test/context")
+    (toData [_ _] (Optional/of (->payload nil (->metadata "test/context"))))
+    (withContext [this context]
+      (reset! received-context context)
+      this)))
+
+(deftest to-payload-propagates-context
+  (let [received-context (atom nil)
+        data-converter (-> (sut/create [(context-recorder received-context)])
+                           (.withContext context))]
+    (.toPayload data-converter (encoding/with :something "test/context"))
+    (is (= context @received-context))))
 
 (def metadata-null
   (->metadata "binary/null"))
