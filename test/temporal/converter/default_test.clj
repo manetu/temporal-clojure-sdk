@@ -13,10 +13,8 @@
    [io.temporal.common.converter
     DataConverterException
     EncodingKeys
-    NullPayloadConverter
-    PayloadAndFailureDataConverter]
-   [io.temporal.payload.context WorkflowSerializationContext]
-   [java.lang.reflect Field]))
+    NullPayloadConverter]
+   [io.temporal.payload.context WorkflowSerializationContext]))
 
 (defn payload->encoding [^Payload payload]
   (.. payload
@@ -48,7 +46,7 @@
   (do-template
    [predicate input-value]
    (let [data-converter (sut/create)]
-     (testing "withhout-context"
+     (testing "without-context"
        (is (predicate (-> data-converter
                           (.toPayload input-value)
                           (.get)))))
